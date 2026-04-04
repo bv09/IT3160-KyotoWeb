@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Tool Cắt Tỉa Cạnh (Graph Editor)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif;}
+        #map { height: 100vh; width: 100vw; }
+        .control-panel {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 280px;
+        }
+        button {
+            width: 100%; background-color: #ef4444; color: white;
+            border: none; padding: 10px; font-size: 16px; border-radius: 5px;
+            cursor: pointer; font-weight: bold; margin-top: 10px;
+        }
+        button:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+
+    <div class="control-panel">
+        <h3 style="margin-top: 0;">✂️ Graph Editor</h3>
+        <p style="font-size: 13px; color: #555;">
+            <b>Cách dùng:</b><br>
+            1. Rê chuột vào cạnh (đường ray) muốn xóa, nó sẽ đỏ lên.<br>
+            2. Click chuột trái vào nó để xóa cắt đứt liên kết.<br>
+            3. Xóa xong bấm nút xuất file bên dưới.
+        </p>
+        <button onclick="exportCleanGraph()">📥 Xuất Đồ Thị Đã Tỉa</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // KHỞI TẠO BẢN ĐỒ VỚI SUPER ZOOM (Lên tới mức 24)
+        const map = L.map('map', {
+            maxZoom: 24 // Mở khóa giới hạn zoom của khung nhìn
+        }).setView([35.0116, 135.7681], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxNativeZoom: 19, // Báo cho Leaflet biết: Ảnh gốc từ máy chủ chỉ có đến mức 19 thôi
+            maxZoom: 24,       // Nhưng hãy tự động phóng to cái ảnh mức 19 đó lên đến mức 24
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        let globalNodes = {};
+        let globalEdges = {};
+
+        // ĐỔI TÊN FILE NÀY THÀNH FILE JSON ÔNG MUỐN CHỈNH SỬA
+        fetch('kyoto_graph_edited.json')
+            .then(res => res.json())
+            .then(data => {
+                globalNodes = data.nodes;
+                globalEdges = data.adjacency_list;
+
+                const drawnEdges = new Set();
+
+                // 1. VẼ ĐƯỜNG RAY & THÊM SỰ KIỆN CLICK ĐỂ XÓA
+                for (const u in globalEdges) {
+                    for (const v in globalEdges[u]) {
+                        const edgeId = u < v ? `${u}-${v}` : `${v}-${u}`;
+                        
+                        if (!drawnEdges.has(edgeId)) {
+                            drawnEdges.add(edgeId);
+
+                            if (globalNodes[u] && globalNodes[v]) {
+                                const latlngs = [
+                                    [globalNodes[u].lat, globalNodes[u].lon],
+                                    [globalNodes[v].lat, globalNodes[v].lon]
+                                ];
+
+                                // Vẽ đường nét to để dễ click
+                                const polyline = L.polyline(latlngs, {
+                                    color: '#3b82f6', weight: 5, opacity: 0.8
+                                }).addTo(map);
+
+                                // Hiệu ứng Hover: Rê chuột vào nó sẽ đỏ rực lên
+                                polyline.on('mouseover', function() {
+                                    this.setStyle({ color: '#ef4444', weight: 8 });
+                                });
+                                polyline.on('mouseout', function() {
+                                    this.setStyle({ color: '#3b82f6', weight: 5 });
+                                });
+
+                                // Sự kiện CỐT LÕI: Click để xóa
+                                polyline.on('click', function() {
+                                    if (confirm("Xóa cạnh này ra khỏi đồ thị?")) {
+                                        // XÓA AN TOÀN: Kiểm tra xem nó có tồn tại không rồi mới xóa
+                                        if (globalEdges[u] && globalEdges[u][v]) {
+                                            delete globalEdges[u][v];
+                                        }
+                                        if (globalEdges[v] && globalEdges[v][u]) {
+                                            delete globalEdges[v][u];
+                                        }
+                                        
+                                        // Xóa nét vẽ khỏi màn hình
+                                        map.removeLayer(polyline);
+                                        console.log(`Đã cắt đứt liên kết giữa ${u} và ${v}`);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // 2. VẼ CÁC TRẠM LÊN ĐỂ LÀM MỐC (KHÔNG BỊ XÓA)
+                for (const id in globalNodes) {
+                    if (globalNodes[id].is_station) {
+                        L.circleMarker([globalNodes[id].lat, globalNodes[id].lon], {
+                            radius: 6, fillColor: "#22c55e", color: "#fff", weight: 2, fillOpacity: 1
+                        }).addTo(map).bindTooltip(globalNodes[id].name || "Ga", {direction: 'top'});
+                    }
+                }
+            });
+
+        // Hàm xuất file sau khi đã xóa sướng tay
+        function exportCleanGraph() {
+            const cleanData = {
+                nodes: globalNodes,
+                adjacency_list: globalEdges
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cleanData, null, 4));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = "kyoto_graph_edited.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    </script>
+</body>
+</html>
