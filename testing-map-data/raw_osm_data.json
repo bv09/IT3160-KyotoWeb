@@ -2710,53 +2710,6 @@
         },
         {
             "type": "node",
-            "id": 7831762281,
-            "lat": 35.0669237,
-            "lon": 135.8086639,
-            "tags": {
-                "KSJ2:LIN": "鋼索線",
-                "KSJ2:STN": "ケーブル八瀬",
-                "name": "ケーブル八瀬",
-                "name:en": "Cable Yase",
-                "name:ja": "ケーブル八瀬",
-                "name:ko": "케이블 야세",
-                "note": "National-Land Numerical Information (Railway) 2007, MLIT Japan",
-                "note:ja": "国土数値情報（鉄道データ）平成19年　国土交通省",
-                "public_transport": "station",
-                "railway": "station",
-                "source": "KSJ2",
-                "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-N02-v1_1.html",
-                "wikidata": "Q11301448",
-                "wikipedia": "ja:ケーブル八瀬駅"
-            }
-        },
-        {
-            "type": "node",
-            "id": 7831762282,
-            "lat": 35.0642207,
-            "lon": 135.8223559,
-            "tags": {
-                "KSJ2:LIN": "鋼索線",
-                "KSJ2:STN": "ケーブル比叡",
-                "name": "ケーブル比叡",
-                "name:en": "Cable Hiei",
-                "name:ja": "ケーブル比叡",
-                "name:ja-Hira": "けーぶるひえい",
-                "name:ko": "케이블 히에",
-                "network": "鋼索線",
-                "note": "National-Land Numerical Information (Railway) 2007, MLIT Japan",
-                "note:ja": "国土数値情報（鉄道データ）平成19年　国土交通省",
-                "operator": "京福電気鉄道",
-                "public_transport": "station",
-                "railway": "station",
-                "source": "KSJ2",
-                "source_ref": "http://nlftp.mlit.go.jp/ksj/jpgis/datalist/KsjTmplt-N02-v1_1.html",
-                "wikidata": "Q6383576",
-                "wikipedia": "ja:京福電気鉄道鋼索線"
-            }
-        },
-        {
-            "type": "node",
             "id": 7831866347,
             "lat": 34.9924634,
             "lon": 135.7183338,

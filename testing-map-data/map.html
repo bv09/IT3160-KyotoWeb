@@ -55,35 +55,64 @@
                 }
             }
 
-            // 2. VẼ LỘ TRÌNH NGẮN NHẤT (Nét đậm màu đỏ)
+// =========================================================
+            // 2. VẼ LỘ TRÌNH NGẮN NHẤT (VẼ ĐƯỜNG TRƯỚC, VẼ GA SAU ĐỂ KHÔNG BỊ ĐÈ)
+            // =========================================================
+            
             const pathCoordinates = [];
-            for (const id of pathIds) {
+            
+            // BƯỚC 2.1: Quét 1 vòng chỉ để lấy tọa độ và VẼ ĐƯỜNG RAY
+            for (let i = 0; i < pathIds.length; i++) {
+                const id = pathIds[i];
                 if (nodes[id]) {
                     pathCoordinates.push([nodes[id].lat, nodes[id].lon]);
                 }
             }
 
+            // Vẽ vệt đỏ dày nối toàn bộ lộ trình (Nằm ở lớp dưới)
             if (pathCoordinates.length > 0) {
                 const pathLine = L.polyline(pathCoordinates, {
-                    color: '#ef4444', // Màu đỏ rực rỡ
-                    weight: 6,        // Nét cực dày
+                    color: '#ef4444', 
+                    weight: 6,        
                     opacity: 1
                 }).addTo(map);
 
-                // Tự động zoom và căn giữa màn hình vừa khít với đường đi
+                // Tự động zoom bản đồ vừa khít với toàn bộ chuyến đi
                 map.fitBounds(pathLine.getBounds());
+            }
 
-                // Ghim Ga Xuất Phát (Màu xanh lá)
-                const startId = pathIds[0];
-                L.circleMarker(pathCoordinates[0], {
-                    radius: 8, fillColor: "#22c55e", color: "#fff", weight: 2, fillOpacity: 1
-                }).addTo(map).bindPopup(`<b>Điểm xuất phát</b><br>${nodes[startId].name || 'Track Node'}`);
+            // BƯỚC 2.2: Quét vòng lặp lần thứ 2 để VẼ CÁC CHẤM GA TÀU (Nằm ở lớp trên)
+            for (let i = 0; i < pathIds.length; i++) {
+                const id = pathIds[i];
+                if (nodes[id] && nodes[id].is_station) {
+                    const latlng = [nodes[id].lat, nodes[id].lon];
+                    
+                    let markerColor = "#f59e0b"; // Vàng cam cho ga trung gian
+                    let markerRadius = 6;
+                    let popupText = `<b>Trạm đi qua:</b><br>${nodes[id].name}`;
 
-                // Ghim Ga Đích (Màu đỏ)
-                const endId = pathIds[pathIds.length - 1];
-                L.circleMarker(pathCoordinates[pathCoordinates.length - 1], {
-                    radius: 8, fillColor: "#ef4444", color: "#fff", weight: 2, fillOpacity: 1
-                }).addTo(map).bindPopup(`<b>Điểm đích</b><br>${nodes[endId].name || 'Track Node'}`);
+                    // Điểm xuất phát
+                    if (i === 0) {
+                        markerColor = "#22c55e"; // Xanh lá
+                        markerRadius = 8;        
+                        popupText = `<b>🚩 Điểm xuất phát</b><br>${nodes[id].name}`;
+                    } 
+                    // Điểm đích
+                    else if (i === pathIds.length - 1) {
+                        markerColor = "#ef4444"; // Đỏ
+                        markerRadius = 8;
+                        popupText = `<b>🏁 Điểm đích</b><br>${nodes[id].name}`;
+                    }
+
+                    // Vẽ marker (Vì lệnh này gọi sau polyline nên nó sẽ nổi lềnh bềnh trên cái vạch đỏ)
+                    L.circleMarker(latlng, {
+                        radius: markerRadius,
+                        fillColor: markerColor,
+                        color: "#fff",
+                        weight: 2,
+                        fillOpacity: 1
+                    }).addTo(map).bindPopup(popupText);
+                }
             }
         })
         .catch(error => {

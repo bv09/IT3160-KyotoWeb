@@ -60,33 +60,51 @@ def buildGraph(osm_data):
 
                     graph[u][v] = weight
                     graph[v][u] = weight
-    # =====================================================================
-    # BƯỚC 3: CHUẨN HÓA GA MỒ CÔI (CHỈ NỐI GA VÀO ĐƯỜNG RAY)
+# =====================================================================
+    # BƯỚC 3 NÂNG CẤP: MÔ HÌNH TRẠM MẸ - TRẠM CON (1 GA NHIỀU ĐƯỜNG RAY)
     # =====================================================================
     station_ids = [n_id for n_id, data in nodes_info.items() if data['is_station']]
     
+    # Bán kính phủ sóng của nhà ga (tính bằng mét). Ga lớn có thể set 60m - 100m.
+    STATION_RADIUS = 60 
+
     for station_id in station_ids:
-        # Nếu ga này đang bị cô lập (chưa nằm trên bất kỳ đường ray nào)
-        if not graph[station_id]: 
+        # Không cần check ga mồ côi nữa, ta sẽ quét quét mọi ga để tìm các Platform của nó
+        found_platforms = False
+        
+        for track_node_id, edges in graph.items():
+            # Đảm bảo node kia là một thanh ray đang hoạt động (có kết nối) và không phải chính nó
+            if edges and track_node_id != station_id: 
+                dist = calculate_distance(
+                    nodes_info[station_id]['lat'], nodes_info[station_id]['lon'],
+                    nodes_info[track_node_id]['lat'], nodes_info[track_node_id]['lon']
+                )
+                
+                # Nếu thanh ray này nằm trọn trong khuôn viên nhà ga (<= 60 mét)
+                if dist <= STATION_RADIUS:
+                    # Kéo 1 nét nối (đi bộ trung chuyển) từ Sảnh Ga (Mẹ) xuống Nền Đường Ray (Con)
+                    graph[station_id][track_node_id] = dist
+                    graph[track_node_id][station_id] = dist
+                    found_platforms = True
+        
+        # Fallback (Phòng hờ): Nhỡ cái ga nào nằm trơ trọi, cách đường ray tới 150m (do data OSM lỗi)
+        # Thì ta vẫn phải dùng logic cũ: Tìm 1 thằng gần nhất để vớt nó vào đồ thị
+        if not found_platforms:
             min_dist = float('inf')
-            closest_track_node = None
-            
-            # Quét tìm 1 điểm ĐƯỜNG RAY gần cái ga này nhất
-            for node_id, edges in graph.items():
-                # Điều kiện 'edges': Đảm bảo điểm kia ĐÃ NẰM TRÊN ĐƯỜNG RAY (có kết nối)
-                if edges and node_id != station_id: 
+            closest_track = None
+            for track_node_id, edges in graph.items():
+                if edges and track_node_id != station_id:
                     dist = calculate_distance(
                         nodes_info[station_id]['lat'], nodes_info[station_id]['lon'],
-                        nodes_info[node_id]['lat'], nodes_info[node_id]['lon']
+                        nodes_info[track_node_id]['lat'], nodes_info[track_node_id]['lon']
                     )
                     if dist < min_dist:
                         min_dist = dist
-                        closest_track_node = node_id
+                        closest_track = track_node_id
             
-            # Kéo 1 nét nối từ Ga cắm thẳng vào điểm Đường Ray đó (giới hạn < 200m để không nối bậy)
-            if closest_track_node and min_dist < 200:
-                graph[station_id][closest_track_node] = min_dist
-                graph[closest_track_node][station_id] = min_dist
+            if closest_track and min_dist < 300: # Ngưỡng vớt tối đa 300m
+                graph[station_id][closest_track] = min_dist
+                graph[closest_track][station_id] = min_dist
     return graph, nodes_info
 
 def exportGraph(graph, nodes_info, filename="kyoto_graph_weight_ver1.json"):
