@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản đồ Đường sắt Kyoto</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        /* Thiết lập bản đồ chiếm toàn bộ màn hình */
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Khởi tạo bản đồ, set tọa độ trung tâm là Kyoto và mức zoom là 13
+        const map = L.map('map').setView([35.0116, 135.7681], 13);
+    
+        // 2. Thêm lớp bản đồ nền từ OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Đọc dữ liệu từ file JSON
+        fetch('raw_osm_data.json')
+            .then(response => response.json()) // fetch va gan vao response roi chuyen thanh json
+            .then(data => { // gan response json vao data
+                // way
+                for (const element of data.elements) {
+                    if (element?.type === 'way' && element.geometry) {
+                        const latlngs = element.geometry.map(p => [p.lat, p.lon]);
+                        if (element.tags?.oneway === 'yes') {
+                            L.polyline(latlngs, { color: 'green', weight: 5 }).addTo(map)
+                                .bindPopup(`Way ID: ${element.id} (One Way)`);
+                        } else {
+                            L.polyline(latlngs, { color: 'blue', weight: 5 }).addTo(map)
+                                .bindPopup(`Way ID: ${element.id}`);
+                        }
+                        L.circleMarker(latlngs[0], { radius: 5, color: 'white', fillColor: 'blue', fillOpacity: 1 }).addTo(map)
+                            .bindPopup(`Node ID: ${element.nodes[0]} - Start`);
+                        L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, color: 'white', fillColor: 'blue', fillOpacity: 1 }).addTo(map)
+                            .bindPopup(`Node ID: ${element.nodes[element.nodes.length - 1]} - End`);
+                    }
+                }
+                // mark stations va stops
+                for (const element of data.elements) {
+                    if (element && element.type === 'node' && element.tags && element.tags.railway === 'station') {
+
+                        const lat = element.lat;
+                        const lon = element.lon;
+                        const name = element.tags['name:en'] || 'Nameless Station';
+                    
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`<b>${name}</b><br>Lat: ${lat}, Lon: ${lon}`);
+                    }
+                    if (element && element.type === 'node' && element.tags && element.tags.railway === 'stop') {
+
+                        const lat = element.lat;
+                        const lon = element.lon;
+                        const name = element.tags['name:en'] || 'Nameless Stop';
+                    
+                        L.circleMarker([lat, lon], { radius: 8, color: 'white', fillColor: 'red', fillOpacity: 1 }).addTo(map)
+                            .bindPopup(`<b>${name}</b><br>Lat: ${lat}, Lon: ${lon}`);
+                    }
+                }
+                // relation 
+                const colors = ['red', 'blue', 'green', 'purple', 'orange', 'brown'];
+
+                let i = 0;
+
+                for (const element of data.elements) {
+                    if (element.type === 'relation' && element.tags?.route === 'subway') {
+
+                        const color = colors[i % colors.length]; // vòng lại nếu hết màu
+                        i++;
+
+                        for (const member of element.members || []) {
+                            if (member.type === 'way') {
+                                const latlngs = [];
+                                const way = data.elements.find(e => e.type === 'way' && e.id === member.ref);
+
+                                if (way?.geometry) {
+                                    latlngs.push(...way.geometry.map(p => [p.lat, p.lon]));
+                                }
+                               // L.polyline(latlngs, {color : color, weight: 5 }).addTo(map);
+                            }
+                        }
+
+                        
+                    }
+                }
+            })
+    </script>
+</body>
+</html>

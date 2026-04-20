@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bản đồ Tìm đường - Kyoto</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100vw; }
+        /* Nút nổi trên map */
+        #btnRoute {
+            position: absolute;
+            top: 10px;
+            left: 100px;
+            z-index: 1000;
+            padding: 4px 12px;
+            background: rgb(255, 255, 255);
+            border: 2px solid #020101;
+            cursor: pointer;
+        }
+
+        #btnClear {
+            position: absolute;
+            top: 10px;
+            left: 210px;
+            z-index: 1000;
+            padding: 4px 12px;
+            background: rgb(255, 255, 255);
+            border: 2px solid #020101;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button id="btnRoute">Tìm đường</button>
+    <button id="btnClear" onclick="clearMap()">Clear</button>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let Markers = [];
+        let points = [];
+        let isSelecting = false;
+        let Polylines = [];
+
+        // Set map
+        const map = L.map('map').setView([35.0116, 135.7681], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Finding path Button click event
+        map.on('click', function(e) {
+            if (isSelecting) {
+                points.push([e.latlng.lat, e.latlng.lng]);
+                const marker = L.marker(e.latlng).addTo(map);
+                Markers.push(marker);
+                if (points.length === 2) {
+                    isSelecting = false;
+                    document.getElementById('btnRoute').innerText = "Tìm đường";
+                    document.getElementById('btnClear').style.marginLeft = '0px'; 
+                    // Sau khi có 2 điểm, bạn có thể gửi chúng đến backend để tìm đường đi ngắn nhất
+                    console.log("Đã chọn 2 điểm");
+                    SendtoServer(points);
+                }
+            }
+        });
+        document.getElementById('btnRoute').addEventListener('click', function() {
+            if (!isSelecting) {
+                 // Xóa các marker cũ nếu có
+                Markers.forEach(m => map.removeLayer(m));
+                Polylines.forEach(p => map.removeLayer(p));
+                points = [];
+                Markers = [];
+                isSelecting = true;
+                this.innerText = "Chọn 2 điểm trên bản đồ";
+                document.getElementById('btnClear').style.marginLeft = '80px'; // Đảm bảo nút Clear không bị chồng lên nút Route 
+            }
+            else {
+                isSelecting = false;
+                this.innerText = "Tìm đường";
+                document.getElementById('btnClear').style.marginLeft = '0px'; // Đặt lại vị trí nút Clear
+            }
+        });
+
+        // gửi dữ liệu đến backend để tìm đường đi ngắn nhất
+        function SendtoServer(points) {
+            fetch('http://127.0.0.1:5000/save_input', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    start: points[0] || null,
+                    end: points[1] || null 
+                })
+            })
+            .then(res => {
+                if (res.status === 404) {
+                    alert("Không tìm thấy đường đi giữa 2 điểm đã chọn.");
+                    return null;
+                }
+                else if (res.status === 200) {
+                    return res.json();
+                }                
+                else {
+                    alert("Lỗi không xác định: " + res.status);
+                    return null;
+                }
+            })
+            .then(data => {
+                if (data === null) return;
+                setTimeout(() => {
+                    drawPath(data);
+                }, 300);
+                
+            })
+            .catch(error => {
+                console.error('Error sending data to server:', error);
+                alert("Lỗi gửi dữ liệu đến server :", error);
+            });
+        }
+        // Clear button 
+
+        function clearMap() {
+            Markers.forEach(m => map.removeLayer(m));
+            Polylines.forEach(p => map.removeLayer(p));
+            points = [];
+            Markers = [];
+            Polylines = [];
+            isSelecting = false;
+            document.getElementById('btnRoute').innerText = "Tìm đường";
+            document.getElementById('btnClear').style.marginLeft = '0px';
+        }
+            
+        // Function draw path on map
+        function drawPath(path) {
+            let pathLatLngs = [];
+            for (const [coord, stopName] of path) {
+                if (stopName) {
+                    let marker = L.circleMarker(coord, { radius: 8, color: 'white', fillColor: 'red', fillOpacity: 1 }).addTo(map)
+                        .bindPopup(`Stop: ${stopName}`);
+                    Markers.push(marker);
+                }
+                if (coord) {
+                    pathLatLngs.push(coord);
+                }
+            }
+            let Polyline = L.polyline(pathLatLngs, { color: 'green', weight: 5 }).addTo(map)
+                .bindPopup(`Shortest Path`);
+            Polylines.push(Polyline);
+        }
+
+        // Tải bản đồ gốc
+        Promise.all([
+            fetch('http://127.0.0.1:5000/raw_osm_data.json').then(res => res.json()), 
+            //fetch('shortest_path.json').then(res => res.json())
+        ])
+        .then(([graphData]) => {
+            for (const element of graphData.elements) {
+                if (element && element.type === 'node' && element.tags && element.tags.railway === 'station') {
+                    const lat = element.lat;
+                    const lon = element.lon;
+                    const name = element.tags['name:en'] || 'Nameless Station';
+                
+                    const marker = L.circleMarker([lat, lon], {     
+                        radius: 8, color: 'white', 
+                        fillColor: 'blue', fillOpacity: 1 
+                    }).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>Lat: ${lat}, Lon: ${lon}`);
+
+                    marker.on('click', function(e) {                 
+                        L.DomEvent.stopPropagation(e);
+                        if (!isSelecting) return;
+                        if (points.length >= 2) return;
+                        points.push([lat, lon]);
+                        let mark = L.marker([lat, lon]).addTo(map);
+                        Markers.push(mark);
+                        if (points.length === 2) {
+                            isSelecting = false;
+                            document.getElementById('btnRoute').innerText = "Tìm đường";
+                            document.getElementById('btnClear').style.marginLeft = '0px';
+                            SendtoServer(points);
+                        }
+                    });
+                }
+
+                if (element && element.type === 'node' && element.tags && element.tags.railway === 'stop') {
+                    const lat = element.lat;
+                    const lon = element.lon;
+                    const name = element.tags['name:en'] || 'Nameless Stop';
+                    const marker = L.circleMarker([lat, lon], {      
+                        radius: 6, color: 'white', 
+                        fillColor: 'red', fillOpacity: 1 
+                    }).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>Lat: ${lat}, Lon: ${lon}`);
+
+                    marker.on('click', function(e) {                  
+                        L.DomEvent.stopPropagation(e);
+                        if (!isSelecting) return;
+                        if (points.length >= 2) return;
+                        points.push([lat, lon]);
+                        let mark = L.marker([lat, lon]).addTo(map);
+                        Markers.push(mark);
+                        if (points.length === 2) {
+                            isSelecting = false;
+                            document.getElementById('btnRoute').innerText = "Tìm đường";
+                            document.getElementById('btnClear').style.marginLeft = '0px';
+                            SendtoServer(points);
+                        }
+                    });
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Lỗi tải dữ liệu:', error);
+            alert("Lỗi tải file. Hãy chắc chắn đã chạy bằng Local Server (Live Server / Python http.server) và đã sinh ra file shortest_path.json");
+        });
+    </script>
+</body>
+</html>
