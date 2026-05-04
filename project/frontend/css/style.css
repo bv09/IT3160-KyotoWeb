@@ -1,0 +1,62 @@
+/* ──────────────── Layout ──────────────── */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#map {
+    height: 100vh;
+    width: 100vw;
+}
+
+/* ──────────────── Controls ──────────────── */
+.map-controls {
+    position: absolute;
+    top: 10px;
+    left: 100px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+}
+
+.map-controls button {
+    padding: 6px 14px;
+    background: #ffffff;
+    border: 2px solid #333;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.map-controls button:hover {
+    background: #f0f0f0;
+    border-color: #000;
+}
+
+.map-controls button.active {
+    background: #4CAF50;
+    color: white;
+    border-color: #388E3C;
+}
+
+/* ──────────────── Distance info ──────────────── */
+#distance-info {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    border-radius: 6px;
+    font-size: 14px;
+    display: none;
+}
+
+#distance-info.visible {
+    display: block;
+}
