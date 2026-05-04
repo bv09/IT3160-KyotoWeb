@@ -1,61 +1,103 @@
-# IT3160-Kyoto
-## ⚙️ How to Run
+# KyotoSubway — Shortest Path Finder
 
-### 1. Install dependencies
+Ứng dụng web tìm đường đi ngắn nhất trên hệ thống đường sắt Kyoto (tàu điện ngầm, tàu hỏa, xe điện), sử dụng thuật toán Dijkstra trên dữ liệu OpenStreetMap.
 
-Make sure you have Python installed, then run:
+## Kiến trúc
 
-```bash
-pip install requests
-pip install flask
-pip install flask_cors
+```
+project/
+├── backend/          # Flask API server
+│   ├── app.py        # App factory
+│   ├── config.py     # Cấu hình (dev/prod/test)
+│   ├── models/       # SubwayGraph dataclass
+│   ├── services/     # Dijkstra, OSM loader
+│   ├── routes/       # API endpoints
+│   ├── utils/        # Haversine, validation
+│   └── scripts/      # Overpass API fetcher
+├── frontend/         # Leaflet.js SPA
+│   ├── index.html
+│   ├── css/
+│   └── js/
+├── data/             # Dữ liệu OSM (không commit)
+├── tests/            # Unit + integration tests
+├── Dockerfile
+└── docker-compose.yml
 ```
 
----
-
-### 2. Run backend
+## Cài đặt
 
 ```bash
-python path_finding.py
+# 1. Tạo virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# 2. Cài đặt dependencies
+make install
+
+# 3. Tải dữ liệu từ Overpass API (chạy lần đầu)
+make fetch-data
+
+# 4. Cấu hình environment
+cp .env.example .env
+
+# 5. Chạy server
+make run
 ```
 
-* This starts the backend server
-* Keep this terminal running
+Mở trình duyệt tại `http://localhost:5000`
 
----
+## Sử dụng
 
-### 3. Run frontend
+1. Bấm nút **"Tìm đường"**
+2. Chọn 2 điểm trên bản đồ (hoặc bấm vào các trạm/điểm dừng)
+3. Đường đi ngắn nhất sẽ được vẽ bằng đường xanh lá
 
-Open the file:
+## API
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| `POST` | `/api/v1/pathfind` | Tìm đường ngắn nhất giữa 2 tọa độ |
+| `GET`  | `/api/v1/map-data` | Lấy dữ liệu bản đồ OSM |
+
+### `POST /api/v1/pathfind`
+
+**Request:**
+```json
+{
+  "start": [35.0116, 135.7681],
+  "end": [34.9850, 135.7590]
+}
+```
+
+**Response (200):**
+```json
+{
+  "path": [[[35.0116, 135.7681], "Kyoto"], [[34.99, 135.76], null], ...],
+  "distance_meters": 3456.78
+}
+```
+
+## Docker
 
 ```bash
-map.html
+# Build và chạy
+make docker-up
+
+# Dừng
+make docker-down
 ```
 
-You can:
+## Chạy test
 
-* double-click to open in browser
-* or use Live Server in VS Code
+```bash
+make test
+```
 
----
+## Tech Stack
 
-### 4. Usage
-
-1. Click the button to start selecting points
-2. Click **2 locations on the map**:
-
-   * First click → Start point
-   * Second click → End point
-3. Wait a few seconds
-4. The path (if available) will be displayed
-
----
-
-### ⚠️ Notes
-
-* Backend must be running before opening the frontend
-* Project is still under development, some features may not work
-* If nothing happens:
-
-  * check browser console (F12)
-  * check backend terminal
+- **Backend**: Python, Flask, flask-cors
+- **Thuật toán**: Dijkstra (min-heap), Haversine distance
+- **Frontend**: Leaflet.js (vanilla JS modules)
+- **Dữ liệu**: OpenStreetMap (Overpass API)
+- **Deployment**: Docker, Gunicorn
