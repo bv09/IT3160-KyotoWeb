@@ -24,20 +24,8 @@ DEFAULT_OUTPUT = "data/raw_osm_data.json"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 QUERY = """
-    [out:json][timeout:60];
-    area[name="京都市"][admin_level="7"]->.kyoto;
-
-    relation[route~"subway|train|tram"](area.kyoto)->.routes;
-    .routes out geom;
-
-    node[railway=station](area.kyoto);
-    out geom;
-
-    node(r.routes)(area.kyoto)->.stops;
-    .stops out geom;
-
-    way(r.routes)(area.kyoto);
-    out geom;
+    
+    
 """
 
 HEADERS = {"User-Agent": "KyotoPathfindingApp/1.0 (HUST Student Project)"}

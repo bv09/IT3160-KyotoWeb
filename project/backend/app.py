@@ -15,6 +15,7 @@ from flask_cors import CORS
 from backend.config import config
 from backend.routes.api import api_bp
 from backend.services.osm_loader import load_graph
+from backend.utils.nearest_points import build_spatial_index
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +55,9 @@ def create_app(config_name: str | None = None) -> Flask:
         try:
             graph = load_graph(data_file)
             app.config["GRAPH"] = graph
+            Tree, node_ids = build_spatial_index(graph)
+            app.config["KDTREE"] = Tree
+            app.config["NODE_IDS"] = node_ids
             logger.info("Đồ thị đã được load thành công.")
         except FileNotFoundError as e:
             logger.error(str(e))

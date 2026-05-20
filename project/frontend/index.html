@@ -16,6 +16,7 @@
     <div class="map-controls">
         <button id="btnRoute">Tìm đường</button>
         <button id="btnClear">Clear</button>
+        <button id="btnToggleGraph">Xem graph</button>
     </div>
 
     <!-- Khoảng cách -->
@@ -27,6 +28,7 @@
         import { initMap } from "./js/map.js";
         import { loadStations } from "./js/stations.js";
         import { initPathfinder, addPoint, isInSelectingMode } from "./js/pathfinder.js";
+        import { initGraphDisplay } from "./js/graph-display.js";
 
         // 1. Khởi tạo bản đồ
         const map = initMap("map");
@@ -41,6 +43,10 @@
                 addPoint(map, lat, lon);
             }
         });
+
+        // 4. Khởi tạo hiển thị SubwayGraph edges
+        initGraphDisplay(map);
+        
     </script>
 </body>
 </html>

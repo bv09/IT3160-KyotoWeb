@@ -127,8 +127,8 @@ async function sendToServer(map, points) {
         if (response.status === 404) {
             alert("Không tìm thấy đường đi giữa 2 điểm đã chọn.");
             return;
-        }
-
+        } 
+        
         if (response.status === 400) {
             const err = await response.json();
             alert("Lỗi: " + (err.error || "Dữ liệu không hợp lệ."));
@@ -152,31 +152,59 @@ async function sendToServer(map, points) {
 
 /**
  * Vẽ đường đi trên bản đồ.
+ * - Đường nét đứt (Manhattan): từ điểm có stopName → không có stopName (hoặc ngược lại)
+ * - Đường nét liền (polyline): từ điểm không có stopName → không có stopName
  */
 function drawPath(map, path) {
-    const pathLatLngs = [];
-
+    // Vẽ các marker tại mỗi điểm
     for (const [coord, stopName] of path) {
         if (coord) {
-            pathLatLngs.push(coord);
-        }
-        if (stopName && coord) {
             const marker = L.circleMarker(coord, {
-                radius: 8,
+                radius: stopName ? 8 : 4,
                 color: "white",
-                fillColor: "red",
+                fillColor: stopName ? "red" : "blue",
                 fillOpacity: 1,
-            }).addTo(map).bindPopup(`Trạm: ${stopName}`);
+            }).addTo(map).bindPopup(stopName ? `Trạm: ${stopName}` : "Điểm trung gian");
+        
             markers.push(marker);
         }
     }
-
-    if (pathLatLngs.length > 0) {
-        const polyline = L.polyline(pathLatLngs, {
-            color: "green",
-            weight: 5,
-        }).addTo(map).bindPopup("Đường đi ngắn nhất");
-        polylines.push(polyline);
+    
+    // Vẽ các đoạn đường giữa các điểm
+    for (let i = 0; i < path.length - 1; i++) {
+        const [coordA, stopNameA] = path[i];
+        const [coordB, stopNameB] = path[i + 1];
+        
+        if (!coordA || !coordB) continue;
+        
+        const hasStopA = !!stopNameA;
+        const hasStopB = !!stopNameB;
+        
+        // Nếu khác loại (một có stopName, một không) → vẽ Manhattan nét đứt
+        if (hasStopA !== hasStopB) {
+            const [lat1, lng1] = coordA;
+            const [lat2, lng2] = coordB;
+            const manhattanPath = [
+                [lat1, lng1],
+                [lat1, lng2],  // Đi ngang trước
+                [lat2, lng2]   // Rồi đi dọc
+            ];
+            const polyline = L.polyline(manhattanPath, {
+                color: "grey",
+                weight: 3,
+                dashArray: "5, 5"  // Nét đứt
+            }).addTo(map);
+            polylines.push(polyline);
+        } 
+        // Nếu cùng loại và cả hai không có stopName → vẽ polyline nét liền
+        else if (!hasStopA && !hasStopB) {
+            const polyline = L.polyline([coordA, coordB], {
+                color: "green",
+                weight: 3,
+                dashArray: ""  // Nét liền
+            }).addTo(map);
+            polylines.push(polyline);
+        }
     }
 }
 

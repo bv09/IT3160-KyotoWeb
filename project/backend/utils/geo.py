@@ -2,6 +2,21 @@
 
 import math
 
+def manhattan_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Tính khoảng cách Manhattan giữa 2 điểm trên Trái Đất.
+
+    Args:
+        lat1, lon1: Tọa độ điểm thứ nhất (độ).
+        lat2, lon2: Tọa độ điểm thứ hai (độ).
+
+    Returns:
+        Khoảng cách tính bằng mét.
+    """
+    # Chuyển đổi độ sang mét (xấp xỉ)
+    lat_distance = haversine_distance(lat1, lon1, lat2, lon1)
+    lon_distance = haversine_distance(lat1, lon1, lat1, lon2)
+
+    return lat_distance + lon_distance
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Tính khoảng cách (mét) giữa 2 điểm theo công thức Haversine.

@@ -26,24 +26,49 @@ export async function loadStations(map, onMarkerClick = null) {
 }
 
 /**
- * Render các trạm và điểm dừng từ dữ liệu OSM.
+ * Render các trạm và điểm dừng và cổng vào từ dữ liệu OSM.
  */
 function renderStations(map, data, onMarkerClick) {
     for (const element of data.elements) {
         if (!element || element.type !== "node" || !element.tags) continue;
 
         const { railway } = element.tags;
-        if (railway !== "station" && railway !== "stop") continue;
+        
+        // Kiểm tra xem có phải station, stop, hoặc subway_entrance
+        let markerType = null;
+        if (railway === "station") {
+            markerType = "station";
+        } else if (railway === "stop") {
+            markerType = "stop";
+        } else if (railway === "subway_entrance") {
+            markerType = "subway";
+        } else {
+            continue;
+        }
 
         const { lat, lon } = element;
-        const name = element.tags["name:en"] || element.tags["name"] || "Unnamed";
+        const name = element.tags["name:en"] || 'Entrance_' + element.id;
 
-        // Stations = xanh dương lớn, Stops = đỏ nhỏ
-        const isStation = railway === "station";
+        // Xác định màu sắc dựa trên loại
+        let color, fillColor, radius;
+        if (markerType === "station") {
+            color = "blue";
+            fillColor = "blue";
+            radius = 8;
+        } else if (markerType === "stop") {
+            color = "red";
+            fillColor = "red";
+            radius = 6;
+        } else if (markerType === "subway") {
+            color = "purple";
+            fillColor = "purple";
+            radius = 7;
+        }
+
         const marker = L.circleMarker([lat, lon], {
-            radius: isStation ? 8 : 6,
+            radius: radius,
             color: "white",
-            fillColor: isStation ? "blue" : "red",
+            fillColor: fillColor,
             fillOpacity: 1,
         }).addTo(map);
 

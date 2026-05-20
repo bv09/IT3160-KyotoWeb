@@ -27,6 +27,7 @@ def find_shortest_path(
     graph: SubwayGraph,
     start_coord: list[float],
     end_coord: list[float],
+    bonus_distance: float = 0.0,
 ) -> PathResult | None:
     """Tìm đường đi ngắn nhất giữa 2 tọa độ.
 
@@ -83,10 +84,18 @@ def find_shortest_path(
     current = end_node
     while current is not None:
         coord = graph.get_coord_by_node(current)
-        stop_name = graph.get_stop_name(current)
-        path.append((coord, stop_name))
+        if (graph.get_stop_name(current)):
+            stop_name = graph.get_stop_name(current)
+            type = "stop"
+        elif (graph.get_entrance_name(current)):
+            stop_name = graph.get_entrance_name(current)
+            type = "entrance"
+        else:
+            stop_name = None
+            type = "node"
+        
+        path.append((coord, stop_name, type))
         current = previous.get(current)
-
     path.reverse()
 
-    return PathResult(path=path, distance_meters=cost[end_node])
+    return PathResult(path=path, distance_meters=cost[end_node] + bonus_distance)

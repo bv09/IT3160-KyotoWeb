@@ -3,7 +3,6 @@
 Đóng gói toàn bộ dữ liệu đồ thị (adjacency list, node map, stop map)
 vào một class duy nhất, thay vì sử dụng biến global.
 """
-
 from __future__ import annotations
 
 COORD_PRECISION = 7  # Số chữ số thập phân khi làm tròn tọa độ
@@ -17,11 +16,12 @@ class SubwayGraph:
         node_map: Ánh xạ 2 chiều giữa (lat, lon) và node_id.
         stop_map: Ánh xạ (lat, lon) hoặc node_id → tên trạm/điểm dừng.
     """
-
+    
     def __init__(self):
         self.adjacency: dict[int, list[tuple[int, float]]] = {}
         self.node_map: dict = {}  # (lat,lon) → node_id VÀ node_id → (lat,lon)
         self.stop_map: dict = {}  # (lat,lon) hoặc node_id → tên trạm
+        self.entrance_map: dict = {} # (lat,lon) hoặc node_id → tên entrance
 
     def ensure_node(self, node_id: int) -> None:
         """Đảm bảo node_id tồn tại trong adjacency list."""
@@ -51,8 +51,14 @@ class SubwayGraph:
         """Đăng ký tên trạm/điểm dừng cho một node."""
         coord = (round(lat, COORD_PRECISION), round(lon, COORD_PRECISION))
         self.stop_map[coord] = name
-        self.stop_map[node_id] = name
-
+        self.stop_map[node_id] = name 
+        
+    def register_entrance(self, node_id: int, lat: float, lon: float, name: str) -> None:
+        """Đăng ký tên entrance cho một node."""
+        coord = (round(lat, COORD_PRECISION), round(lon, COORD_PRECISION))
+        self.entrance_map[coord] = name
+        self.entrance_map[node_id] = name
+        
     def get_node_by_coord(self, lat: float, lon: float) -> int | None:
         """Tìm node_id từ tọa độ (lat, lon). Trả về None nếu không tìm thấy."""
         coord = (round(lat, COORD_PRECISION), round(lon, COORD_PRECISION))
@@ -68,6 +74,10 @@ class SubwayGraph:
         """Tìm tên trạm/điểm dừng từ node_id. Trả về None nếu không phải trạm."""
         return self.stop_map.get(node_id)
 
+    def get_entrance_name(self, node_id: int) -> str | None:
+        """Tìm tên entrance từ node_id. Trả về None nếu không phải entrance."""
+        return self.entrance_map.get(node_id)
+
     @property
     def node_count(self) -> int:
         """Số lượng node trong đồ thị."""
@@ -77,3 +87,6 @@ class SubwayGraph:
     def edge_count(self) -> int:
         """Tổng số cạnh (có hướng) trong đồ thị."""
         return sum(len(neighbors) for neighbors in self.adjacency.values())
+
+    
+    
