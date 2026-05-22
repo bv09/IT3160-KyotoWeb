@@ -36,33 +36,19 @@ function renderStations(map, data, onMarkerClick) {
         
         // Kiểm tra xem có phải station, stop, hoặc subway_entrance
         let markerType = null;
-        if (railway === "station") {
-            markerType = "station";
-        } else if (railway === "stop") {
+        if (railway === "stop") {
             markerType = "stop";
-        } else if (railway === "subway_entrance") {
-            markerType = "subway";
-        } else {
-            continue;
         }
-
         const { lat, lon } = element;
         const name = element.tags["name:en"] || 'Entrance_' + element.id;
 
         // Xác định màu sắc dựa trên loại
         let color, fillColor, radius;
-        if (markerType === "station") {
-            color = "blue";
-            fillColor = "blue";
-            radius = 8;
-        } else if (markerType === "stop") {
+
+        if (markerType === "stop") {
             color = "red";
             fillColor = "red";
             radius = 6;
-        } else if (markerType === "subway") {
-            color = "purple";
-            fillColor = "purple";
-            radius = 7;
         }
 
         const marker = L.circleMarker([lat, lon], {

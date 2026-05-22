@@ -8,6 +8,7 @@ from flask import Blueprint, current_app, jsonify, request
 from backend.services.pathfinding import find_shortest_path
 from backend.utils.validation import ValidationError, validate_pathfind_input
 from backend.utils.nearest_points import find_nearest_node
+from backend.utils.convert_to_time import convert_walk_time, convert_subway_time
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def pathfind():
         return jsonify({"error": e.message}), 400
     
     #TEST
-    logger.info("%s", json.dumps({"start": start_coord, "end": end_coord}, indent=2))
+    # logger.info("%s", json.dumps({"start": start_coord, "end": end_coord}, indent=2))
 
     dist_start = dist_end = 0.0
     old_start_coord = old_end_coord = None
@@ -63,19 +64,28 @@ def pathfind():
             return jsonify({"error": "Không tìm thấy điểm nào gần điểm kết thúc đã chọn."}), 404
         old_end_coord = end_coord
         end_coord = graph.get_coord_by_node(nearest_node_end)
-
-    result = find_shortest_path(graph, start_coord, end_coord, dist_start + dist_end);
+        
+    bonus_distance = dist_start + dist_end
+    bonus_time = convert_walk_time(bonus_distance)
+    result = None
+    check = 0
+    if start_coord == end_coord:
+        check = 1
+    result = find_shortest_path(graph, start_coord, end_coord)
     
     if result is None:
         return jsonify({"error": "Không tìm thấy đường đi giữa 2 điểm đã chọn."}), 404
+    if check: 
+        result.path.clear()
     if old_start_coord is not None: 
         result.path.insert(0, [old_start_coord, "A", "endpoint"])
     if old_end_coord is not None:
         result.path.append([old_end_coord, "B", "endpoint"])
-
+    
     return jsonify({
         "path": result.path,
-        "distance_meters": round(result.distance_meters, 2),
+        "distance_meters": round(result.distance_meters, 2) + bonus_distance,
+        "estimate_time": round(result.estimate_time, 2) + bonus_time
     })
 
 
@@ -126,19 +136,22 @@ def graph_edges():
 
     # Lấy tất cả edges từ adjacency list
     for from_id, neighbors in graph.adjacency.items():
-        for to_id, distance in neighbors:
-            edges.append({
-                "from": from_id,
-                "to": to_id,
-                "from_name": graph.get_stop_name(from_id) or graph.get_entrance_name(from_id),
-                "to_name": graph.get_stop_name(to_id) or graph.get_entrance_name(to_id),
-                "distance": round(distance, 2)
-            })
+        for to_id, distance, time in neighbors:
+            if graph.get_way_id(to_id) is not None and graph.get_way_id(from_id) is not None:
+                if (graph.get_stop_name(from_id) is None or graph.get_stop_name(to_id) is None):
+                    edges.append({
+                        "from": from_id,
+                        "to": to_id,
+                        "from_name": graph.get_stop_name(from_id) or graph.get_entrance_name(from_id),
+                        "to_name": graph.get_stop_name(to_id) or graph.get_entrance_name(to_id),
+                        "distance": round(distance, 2)
+                    })
 
     # Lấy tọa độ của tất cả nodes
     for node_id, coord in graph.node_map.items():
-        if isinstance(coord, tuple):  # coord có dạng (lat, lon)
-            nodes[str(node_id)] = list(coord)
+        if (graph.get_way_id(node_id) is not None):
+            if isinstance(coord, tuple):  # coord có dạng (lat, lon)
+                nodes[str(node_id)] = list(coord)
 
     return jsonify({
         "edges": edges,

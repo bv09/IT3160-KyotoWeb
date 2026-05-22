@@ -46,7 +46,7 @@ async function showGraph(map) {
                 // Vẽ thẳng cho edges thường
                 L.polyline(
                     [[fromCoord[0], fromCoord[1]], [toCoord[0], toCoord[1]]],
-                    { color: "#ff6f00", weight: 2, opacity: 0.6, interactive: false }
+                    { color: "#00ff1a", weight: 5, opacity: 0.8, interactive: false }
                 ).addTo(graphLayer);  
             }
         });
@@ -80,7 +80,7 @@ function drawManhattanPath(pointA, pointB, layer) {
 
     L.polyline(points, {
         color:     '#6b6a6a',
-        weight:    3,
+        weight:    5,
         dashArray: '6, 12',
         opacity:   0.9,
         interactive: false,
