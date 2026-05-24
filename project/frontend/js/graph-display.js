@@ -1,88 +1,90 @@
 /**
- * Hiển thị tất cả các edges từ SubwayGraph
+ * Hiển thị tất cả các edges từ SubwayGraph.
  */
 
-let graphLayer = null;
+let graphLayer   = null;
 let graphVisible = false;
 
 export function initGraphDisplay(map) {
     const btnToggleGraph = document.getElementById("btnToggleGraph");
+    if (!btnToggleGraph) return;
 
     btnToggleGraph.addEventListener("click", async () => {
         if (graphVisible) {
             hideGraph(map);
+            btnToggleGraph.innerHTML = "<span>🔗</span> Hiện Graph";
             btnToggleGraph.classList.remove("active");
         } else {
-            await showGraph(map);
+            const res  = await fetch("/api/v1/graph-edges");
+            const data = await res.json();
+            showGraphFromData(map, data);
+            btnToggleGraph.innerHTML = "<span>🔗</span> Ẩn Graph";
             btnToggleGraph.classList.add("active");
         }
     });
 }
 
-async function showGraph(map) {
-    try {
-        if (graphLayer) {
-            map.removeLayer(graphLayer);
-        }
+/**
+ * Vẽ graph từ dữ liệu đã fetch sẵn (không fetch lại).
+ *
+ * Logic mờ edges:
+ *   Backend trả về `blocked_track_nodes`: tập các track node_id kề TRỰC TIẾP
+ *   với các stop đang bị block. Edge bị mờ chỉ khi endpoint của nó nằm
+ *   trong tập này → chỉ mờ đoạn đường sát trạm, không mờ cả tuyến.
+ *
+ * Tại sao không dùng way_id:
+ *   1 way_id = cả tuyến subway → block 1 trạm sẽ mờ toàn bộ tuyến (quá rộng).
+ *
+ * Tại sao không dùng blocked_nodes trực tiếp:
+ *   Stop nodes (railway=stop) không nằm trong subway way → không xuất hiện
+ *   trong edges của graph → check sẽ luôn false.
+ */
+export function showGraphFromData(map, data) {
+    const Pane = map.createPane("edge")
+    Pane.style.zIndex = 200;
+    Pane.style.pointerEvents = "none";
+    if (graphLayer) map.removeLayer(graphLayer);
+    graphLayer = L.featureGroup();
 
-        const response = await fetch("/api/v1/graph-edges");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
+    const edges            = data.edges              || [];
+    const nodes            = data.nodes              || {};
+    const blockedTrackSet  = new Set(
+        (data.blocked_track_nodes || []).map(String)
+    );
+    nodes/
+    edges.forEach(edge => {
+        const fromCoord = nodes[String(edge.from)];
+        const toCoord   = nodes[String(edge.to)];
+        if (!fromCoord || !toCoord) return;
 
-        graphLayer = L.featureGroup();
+        // Chỉ mờ edge nếu endpoint là track node kề trực tiếp với stop bị block
+        const isBlocked = blockedTrackSet.size > 0 && (
+            blockedTrackSet.has(String(edge.from)) ||
+            blockedTrackSet.has(String(edge.to))
+        );
 
-        const edges = data.edges || [];
-        const nodes = data.nodes || {};
+        const opacity = isBlocked ? 0.5 : 0.7;
+        const weight  = isBlocked ? 5    : 5;
+        
+        L.polyline(
+            [[fromCoord[0], fromCoord[1]], [toCoord[0], toCoord[1]]],{   
+                pane: "edge",
+                color: isBlocked ? "#444": "blue", 
+                weight, 
+                opacity, 
+                interactive: false }
+        ).addTo(graphLayer);
+    });
 
-        edges.forEach(edge => {
-            const fromCoord = nodes[String(edge.from)];
-            const toCoord   = nodes[String(edge.to)];
-            if (!fromCoord || !toCoord) return;
-
-            if (edge.from_name && edge.to_name) {
-                // Vẽ Manhattan path cho edges có tên (station → station)
-                drawManhattanPath(fromCoord, toCoord, graphLayer);  
-            } else {
-                // Vẽ thẳng cho edges thường
-                L.polyline(
-                    [[fromCoord[0], fromCoord[1]], [toCoord[0], toCoord[1]]],
-                    { color: "#00ff1a", weight: 5, opacity: 0.8, interactive: false }
-                ).addTo(graphLayer);  
-            }
-        });
-
-        graphLayer.addTo(map);
-        graphVisible = true;
-    } catch (error) {
-        console.error("Lỗi khi load graph edges:", error);
-        alert(`Không thể tải graph: ${error.message}`);
-    }
+    graphLayer.addTo(map);
+    graphVisible = true;
 }
 
-function hideGraph(map) {
-    if (graphLayer) {
-        map.removeLayer(graphLayer);
-    }
+export function hideGraph(map) {
+    if (graphLayer) map.removeLayer(graphLayer);
     graphVisible = false;
 }
 
-function drawManhattanPath(pointA, pointB, layer) {
-    const [lat1, lon1] = pointA;
-    const [lat2, lon2] = pointB;
-    const latMid = (lat1 + lat2) / 2;
-
-    const points = [
-        [lat1,   lon1],
-        [latMid, lon1],
-        [latMid, lon2],
-        [lat2,   lon2],
-    ];
-
-    L.polyline(points, {
-        color:     '#6b6a6a',
-        weight:    5,
-        dashArray: '6, 12',
-        opacity:   0.9,
-        interactive: false,
-    }).addTo(layer); 
+export function isGraphVisible() {
+    return graphVisible;
 }

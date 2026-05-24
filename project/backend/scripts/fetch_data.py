@@ -24,8 +24,41 @@ DEFAULT_OUTPUT = "data/raw_osm_data.json"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 QUERY = """
-    
-    
+    [out:json][timeout:180];
+    area[name="京都市"][admin_level="7"]->.kyoto;
+
+    // Tuyến tàu
+    relation[route~"subway"](area.kyoto)->.routes;
+    .routes out geom;
+
+    // Stops từ relation
+    node(r.routes)(area.kyoto)->.stops;
+    .stops out geom;
+
+    // Ways tuyến tàu
+    way(r.routes)(area.kyoto);
+    out geom;
+
+    // Station riêng
+    node[railway = "station"][station = 'subway'](area.kyoto)->.subway_stations;
+    .subway_stations out geom;
+
+    // stop_area relation — chứa mapping entrance <-> station
+    relation[type="public_transport"]
+            [public_transport="stop_area"]
+            (bn.subway_stations)
+            (area.kyoto)->.stop_areas;
+    .stop_areas out geom;
+
+    // Entrances quanh stops
+    node(around.stops : 150)[railway=subway_entrance]->.entrances;
+    .entrances out geom;
+
+    // Đường đi bộ
+    way[highway~"footway|pedestrian|path|sidewalk|steps|corridor|residential|living//street|service|unclassified|tertiary|secondary|primary|track|alley"]
+    [access!~"no|private"]
+    (area.kyoto);
+    out geom; 
 """
 
 HEADERS = {"User-Agent": "KyotoPathfindingApp/1.0 (HUST Student Project)"}
@@ -78,7 +111,7 @@ def fetch_and_save_osm_data(output_path: str = DEFAULT_OUTPUT) -> None:
             if attempt < MAX_RETRIES:
                 logger.info("Chờ %ds trước khi thử lại...", backoff)
                 time.sleep(backoff)
-                backoff *= 2  # Exponential backoff
+                backoff = 2
             else:
                 logger.error("Đã hết số lần thử lại (%d).", MAX_RETRIES)
                 raise

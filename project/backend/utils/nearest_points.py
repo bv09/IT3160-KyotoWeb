@@ -14,7 +14,7 @@ def build_spatial_index(graph: SubwayGraph) -> tuple[KDTree, list[int]]:
             node_ids.append(node_id)    
     return KDTree(np.array(coords)), node_ids
 
-def find_nearest_node(Tree: KDTree, node_ids: list, lat: float, lon: float) -> [int, float] | [None, float]:
+def find_nearest_node(Tree: KDTree, node_ids: list, lat: float, lon: float) -> tuple[int | None, float]:
     """ Tìm node_id gần nhất từ tọa độ (lat, lon) sử dụng KDTree"""
     distance, idx = Tree.query([lat, lon], k = 1)
     return [node_ids[idx], distance] if idx < len(node_ids) else [None, float('inf')]

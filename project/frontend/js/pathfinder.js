@@ -23,7 +23,7 @@ export function initPathfinder(map) {
     const btnRoute = document.getElementById("btnRoute");
     const btnClear = document.getElementById("btnClear");
     distanceInfo = document.getElementById("distance-info");
-    timeInfo = document.getElementById("time-info");
+    timeInfo     = document.getElementById("time-info");
  
     // Click trên bản đồ (chọn điểm tùy ý)
     map.on("click", (e) => {
@@ -60,7 +60,7 @@ export function addPoint(map, lat, lon) {
     if (points.length === 2) {
         isSelecting = false;
         const btnRoute = document.getElementById("btnRoute");
-        btnRoute.innerText = "Tìm đường";
+        btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
         btnRoute.classList.remove("active");
         sendToServer(map, points);
     }
@@ -73,6 +73,25 @@ export function isInSelectingMode() {
     return isSelecting;
 }
  
+/**
+ * Xóa toàn bộ đường + điểm đã vẽ (gọi khi chuyển sang Admin mode).
+ */
+export function clearPath(map) {
+    clearMarkers(map);
+    clearPolylines(map);
+    hideDistance();
+    hideTime();
+    points      = [];
+    isSelecting  = false;
+    const btnRoute = document.getElementById("btnRoute");
+    if (btnRoute) {
+        btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
+        btnRoute.classList.remove("active");
+    }
+    const box = document.getElementById("result-box");
+    if (box) box.classList.add("hidden");
+}
+ 
 // ──────────────── Internal ────────────────
  
 function startSelecting(map, btnRoute) {
@@ -83,13 +102,13 @@ function startSelecting(map, btnRoute) {
     points = [];
  
     isSelecting = true;
-    btnRoute.innerText = "Chọn 2 điểm trên bản đồ";
+    btnRoute.innerHTML = "<span>🗺</span> Chọn 2 điểm...";
     btnRoute.classList.add("active");
 }
  
 function cancelSelecting(btnRoute) {
     isSelecting = false;
-    btnRoute.innerText = "Tìm đường";
+    btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
     btnRoute.classList.remove("active");
 }
  
@@ -100,7 +119,7 @@ function clearAll(map, btnRoute) {
     hideTime();
     points = [];
     isSelecting = false;
-    btnRoute.innerText = "Tìm đường";
+    btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
     btnRoute.classList.remove("active");
 }
  
@@ -162,14 +181,35 @@ async function sendToServer(map, points) {
 function drawPath(map, path) {
     // Vẽ markers cho các điểm
     for (const [coord, stopName, type] of path) {
+        if (type == 'endpoint') continue;
         if (coord) {
+            if (type == 'stop') {
             const marker = L.circleMarker(coord, {
-                radius: stopName ? 8 : 4,
+                radius: 12,
                 color: "white",
-                fillColor: stopName ? "red" : "blue",
+                fillColor: "green",
                 fillOpacity: 1,
-            }).addTo(map).bindPopup(stopName ? `Trạm: ${stopName}` : "Điểm trung gian");
+            }).addTo(map).bindPopup(`Trạm: ${stopName}`);
             markers.push(marker);
+            }
+            else if (type == 'entrance') {
+                const marker = L.circleMarker(coord, {
+                    radius: 8,
+                    color: "white",
+                    fillColor: "purple",
+                    fillOpacity: 1,
+                }).addTo(map).bindPopup({stopName});
+                markers.push(marker);
+            }
+            else {
+                const marker = L.circleMarker(coord, {
+                    radius: 2,
+                    color: "blue",
+                    fillColor: "blue",
+                    fillOpacity: 0.4,
+                }).addTo(map).bindPopup('Điểm trung gian');
+                markers.push(marker);
+            }
         }
     }
  
@@ -192,19 +232,15 @@ function drawPath(map, path) {
         if (isEndpointA || isEndpointB || (hasNameA && hasNameB)) {
             const [lat1, lng1] = coordA;
             const [lat2, lng2] = coordB;
-            const latMid = (lat1 + lat2) / 2;
-            
-            const manhattanPath = [
+            const Path = [
                 [lat1, lng1],
-                [latMid, lng1],
-                [latMid, lng2],
                 [lat2, lng2]
             ];
-            const polyline = L.polyline(manhattanPath, {
-                color: "#5b5a5a",  // Màu cam
+            const polyline = L.polyline(Path, {
+                color: "#5b5a5a",
                 weight: 3,
                 dashArray: "5, 8",
-                opacity: 0.7
+                opacity: 1
             }).addTo(map);
             polylines.push(polyline);
         }
@@ -212,8 +248,8 @@ function drawPath(map, path) {
         else {
             const polyline = L.polyline([coordA, coordB], {
                 color: "#0066cc",  // Màu xanh
-                weight: 3,
-                opacity: 0.6
+                weight: 4,
+                opacity: 0.8
             }).addTo(map);
             polylines.push(polyline);
         }
@@ -226,14 +262,14 @@ function drawPath(map, path) {
 function showDistance(meters) {
     if (!distanceInfo) return;
     const km = (meters / 1000).toFixed(2);
-    distanceInfo.textContent = `Khoảng cách: ${km} km (${Math.round(meters)} m)`;
-    distanceInfo.classList.add("visible");
+    distanceInfo.textContent = `${km} km (${Math.round(meters)} m)`;
+    const box = document.getElementById("result-box");
+    if (box) box.classList.remove("hidden");
 }
  
 function hideDistance() {
     if (!distanceInfo) return;
-    distanceInfo.textContent = "";
-    distanceInfo.classList.remove("visible");
+    distanceInfo.textContent = "—";
 }
  
 /**
@@ -241,21 +277,18 @@ function hideDistance() {
  */
 function showTime(minutes) {
     if (!timeInfo) return;
-    if (minutes == null) {
-        hideTime();
-        return;
-    }
+    if (minutes == null) { hideTime(); return; }
     const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    let timeStr = "Thời gian: ";
+    const mins  = Math.round(minutes % 60);
+    let timeStr = "";
     if (hours > 0) timeStr += `${hours} giờ `;
     timeStr += `${mins} phút`;
     timeInfo.textContent = timeStr;
-    timeInfo.classList.add("visible");
 }
  
 function hideTime() {
     if (!timeInfo) return;
-    timeInfo.textContent = "";
-    timeInfo.classList.remove("visible");
+    timeInfo.textContent = "—";
+    const box = document.getElementById("result-box");
+    if (box) box.classList.add("hidden");
 }
