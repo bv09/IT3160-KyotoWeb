@@ -1,0 +1,675 @@
+# Proposal:Public Transport - OpenStreetMap Wiki
+
+
+* Public_Transport : Proposal status:
+  * Approved (active)
+* Public_Transport : Proposed by:
+  * Teddych
+* Public_Transport : Tagging:
+  * public_transport=stop_position;platform;station;stop_area
+* Public_Transport : Applies to:
+  *    
+* Public_Transport : Definition:
+  * This proposal covers a complete view on the public transport and extends the existing and well known tags with more exact and clearly defined new tags. Most of the proposed tags are already widely used and are a de facto standard in several cities in Central Europe.
+* Public_Transport : Rendered as:
+  * Identical to railway=halt, railway=tram_stop, highway=bus_stop and highway=platform
+* Public_Transport : Draft started:
+  * 2010-11-29
+* Public_Transport : RFC start:
+  * 2010-12-05
+* Public_Transport : Vote start:
+  * 2011-03-31
+* Public_Transport : Vote end:
+  * 2011-04-20
+
+
+Goal of this Public Transport Proposal
+--------------------------------------
+
+This proposal is an advancement of Oxomoa's [Public Transport Schema](https://wiki.openstreetmap.org/wiki/User:Oxomoa/%C3%96PNV-Schema "User:Oxomoa/ÖPNV-Schema") ([English translation](https://wiki.openstreetmap.org/wiki/User:Oxomoa/Public_transport_schema "User:Oxomoa/Public transport schema")).
+
+This proposal covers a complete view on the public transport and extends the existing and well known tags with more exact and clearly defined new tags. Most of the proposed tags are already widely used. With some differences between the cities described in several wiki pages, the new tags are a de facto standard in several cities in Central Europe.
+
+### Main Problem with the existing Schema
+
+*   Inconsistent handling of `[railway](https://wiki.openstreetmap.org/wiki/Key:railway "Key:railway")=[tram_stop](https://wiki.openstreetmap.org/wiki/Tag:railway%3Dtram_stop "Tag:railway=tram stop")` / `[railway](https://wiki.openstreetmap.org/wiki/Key:railway "Key:railway")=[halt](https://wiki.openstreetmap.org/wiki/Tag:railway%3Dhalt "Tag:railway=halt")` (node **on** the way) and `[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[bus_stop](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dbus_stop "Tag:highway=bus stop")` (node **beside** the way).
+*   Missing tag for _stop position_ causes extra preprocessing for routing software.
+*   No separate tags for _stop position_ and _platform / pole_.
+*   Insufficient possibility for line variants for bus lines.
+
+### The new Schema in Short
+
+### What this Proposal does not cover
+
+*   This proposal does not replace, deprecate or obsolete the already existing and well known tags. The usage of the proposed tags is recommended but not mandatory.
+*   Splitting up a route-[![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation") into segments. This is covered by a separate proposal: [Proposed\_features/Route\_Segments](https://wiki.openstreetmap.org/wiki/Proposed_features/Route_Segments "Proposed features/Route Segments").
+*   Facilities for handicapped passengers.
+*   Timetable information.
+
+Stop
+----
+
+Stops are physically represented by poles, shelters, timetables, platforms, bus bays and/or zigzag lines on the street. At the stop passengers are waiting for the transportation vehicle (train/subway/monorail/tram/bus/trolleybus/aerialway/ferry) and can board and leave them when they have stopped.
+
+### Stop Position
+
+```
+The stop position is the place where the vehicle usually stops on the rails or on the street.
+
+```
+
+
+The stop position is tagged as a [![node](https://wiki.openstreetmap.org/w/images/thumb/7/76/Osm_element_node.svg/20px-Osm_element_node.svg.png)](/wiki/Node "node") **on** the way, even when the bus stops in a bus bay. The stop position is tagged with the following attributes:
+
+
+
+* Key: public_transport
+  * Value: stop_position
+  * Comment: Defines this point as a stop position of the vehicle.
+  * Recommendation: mandatory
+* Key: train
+  * Value: yes / no
+  * Comment: If at this stop position stop trains.
+  * Recommendation: recommended if yes, else optional
+* Key: subway
+  * Value: yes / no
+  * Comment: If at this stop position stop subways.
+  * Recommendation: recommended if yes, else optional
+* Key: monorail
+  * Value: yes / no
+  * Comment: If at this stop position stop monorails.
+  * Recommendation: recommended if yes, else optional
+* Key: tram
+  * Value: yes / no
+  * Comment: If at this stop position stop trams.
+  * Recommendation: recommended if yes, else optional
+* Key: bus
+  * Value: yes / no
+  * Comment: If at this stop position stop buses.
+  * Recommendation: recommended if yes, else optional
+* Key: trolleybus
+  * Value: yes / no
+  * Comment: If at this stop position stop trolley-buses.
+  * Recommendation: recommended if yes, else optional
+* Key: aerialway
+  * Value: yes / no
+  * Comment: If at this stop position stop aerialways.
+  * Recommendation: recommended if yes, else optional
+* Key: ferry
+  * Value: yes / no
+  * Comment: If at this stop position stop ferries.
+  * Recommendation: recommended if yes, else optional
+* Key: name
+  * Value: Individual name
+  * Comment: The name by which the stop position is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: ref
+  * Value: Reference
+  * Comment: The reference by which the stop position is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: uic_ref
+  * Value: UIC reference
+  * Comment: The UIC reference by which the stop position is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: uic_name
+  * Value: UIC name
+  * Comment: The UIC name by which the stop position is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the stop position
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: network
+  * Value: Local / regional network 
+  * Comment: Name of the network the stop position belongs to
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+
+
+### Platform
+
+```
+The platform is the place where passengers are waiting for the vehicles.
+
+```
+
+
+The platform is tagged as [![way](https://wiki.openstreetmap.org/w/images/thumb/e/ee/Osm_element_way.svg/20px-Osm_element_way.svg.png)](/wiki/Way "way") or [![area](https://wiki.openstreetmap.org/w/images/thumb/e/e6/Osm_element_area.svg/20px-Osm_element_area.svg.png)](/wiki/Area "area") where the passengers can wait for the vehicles. If there is no platform in the real world, one can place a [![node](https://wiki.openstreetmap.org/w/images/thumb/7/76/Osm_element_node.svg/20px-Osm_element_node.svg.png)](/wiki/Node "node") at the pole with `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")`.
+
+
+
+* Key: public_transport
+  * Value: platform
+  * Comment: Defines this way or area as a platform where passengers are waiting for the vehicle. If there is no platform in the real world, one can place a node at the pole.
+  * Recommendation: mandatory
+* Key: area
+  * Value: yes / no
+  * Comment: If the platform is an area.
+  * Recommendation: recommended if yes, else optional
+* Key: name
+  * Value: Individual name
+  * Comment: The name by which the platform is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: ref
+  * Value: Reference
+  * Comment: The reference by which the platform is known.
+  * Recommendation: recommended if no public_transport=stop_area exists or differs, else optional
+* Key: uic_ref
+  * Value: UIC reference
+  * Comment: The UIC reference by which the platform is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: uic_name
+  * Value: UIC name
+  * Comment: The UIC name by which the platform is known.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the platform.
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: network
+  * Value: Local / regional network 
+  * Comment: Name of the network the stop position belongs to
+  * Recommendation: recommended if no public_transport=stop_area exists, else optional
+* Key: shelter
+  * Value: yes / no
+  * Comment: If there is a shelter that is not tagged separately with amenity=shelter.
+  * Recommendation: recommended if yes, else optional
+* Key: bench
+  * Value: yes / no
+  * Comment: If there is a bench that is not tagged separately with amenity=bench.
+  * Recommendation: recommended if yes, else optional
+* Key: covered
+  * Value: yes / no
+  * Comment: For platforms under the surface. This does not replace a correct layer key.
+  * Recommendation: recommended if yes, but not needed if there is a specific structure (other than a general landuse classification) on a higher layer covering the whole platform.
+
+
+### Station
+
+```
+A station is an area dedicated to and particularly designed for passenger access to Public Transport, considerably bigger than a pair of bus stops or tram stops.
+
+```
+
+
+These are typical properties of a station (not all of them need to be present):
+
+*   A schematic layout
+    *   Multiple lanes or rail tracks with stop positions in parallel, with platforms along them
+    *   Alternatively, in particular at bus stations, there is one big platform in the middle, with stop positions and a service highway around it and maybe an additional platform on the outside with additional stop positions around the service highway
+    *   Of course, other layouts are possible
+*   The station is not a normal part of the road network
+    *   No access for private motorcars (maybe except station related things, such as a drop-off zone for passengers) inside the station
+    *   The outline of the station (the schematic layout) can be recognised easily
+*   There are amenities for waiting passengers, such as
+    *   Protection against the weather, which may be anything from a small shelter, up to a building around the whole station
+    *   Kiosks or vending machines
+    *   A Park&Ride parking beneath the station
+    *   Extensive Information Services
+*   Many stations provide amenities for waiting drivers
+
+The station itself is mapped as an [![area](https://wiki.openstreetmap.org/w/images/thumb/e/e6/Osm_element_area.svg/20px-Osm_element_area.svg.png)](/wiki/Area "area"), usually covering the outline described above, including amenities located inside the dedicated area. If the station is completely (or most of it) inside a station building, the building is the outline. If the station is not fully or mostly covered by a building, any existing buildings should be mapped at their place inside the station outline.
+
+If a station outline is not known, the station can be mapped as a [![node](https://wiki.openstreetmap.org/w/images/thumb/7/76/Osm_element_node.svg/20px-Osm_element_node.svg.png)](/wiki/Node "node"), leaving the details to others.
+
+Please note that more than one station can be member of one and the same stop area. Conversely, it can happen that one station belongs to more than one stop area - if the station contains stop areas (or parts of these) with different attributes, such as different networks.
+
+
+
+* Key: public_transport
+  * Value: station
+  * Comment: Defines the station as such.
+  * Recommendation: mandatory
+* Key: name
+  * Value: Individual name
+  * Comment: The name by which the station is known.
+  * Recommendation: recommended
+* Key: area
+  * Value: yes / no
+  * Comment: If the station outline is an area and not a building.
+  * Recommendation: required if yes, else optional
+* Key: building
+  * Value: yes / no
+  * Comment: If the station outline happens to be the main outline of the station building.
+  * Recommendation: required if yes, else optional
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the station building/area.
+  * Recommendation: optional
+* Key: network
+  * Value: Local / regional network 
+  * Comment: Name of the network the station belongs to
+  * Recommendation: optional
+* Key: covered
+  * Value: yes / no
+  * Comment: For stations under the surface. This does not replace a correct layer key.
+  * Recommendation: recommended if yes, but not needed if there is a specific structure (other than a general landuse classification) on a higher layer covering the whole station.
+
+
+###  [![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation") Stop Area
+
+```
+The stop area is a relation that contains all elements of a train/subway/monorail/tram/bus/trolleybus/aerialway/ferry stop.
+
+```
+
+
+The stop area is the logical combination of the stop position(s) and the platform(s) and is tagged as a [![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation"). The relation can also contain other elements like `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[station](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dstation "Tag:public transport=station")`, `[amenity](https://wiki.openstreetmap.org/wiki/Key:amenity "Key:amenity")=[shelter](https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dshelter "Tag:amenity=shelter")` or `[amenity](https://wiki.openstreetmap.org/wiki/Key:amenity "Key:amenity")=[bench](https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dbench "Tag:amenity=bench")`. Alternatively they may be captured by appending the proper tags `[shelter](https://wiki.openstreetmap.org/wiki/Key:shelter "Key:shelter")=[yes](https://wiki.openstreetmap.org/wiki/Tag:shelter%3Dyes "Tag:shelter=yes")` or `[bench](https://wiki.openstreetmap.org/wiki/Key:bench "Key:bench")=[yes](https://wiki.openstreetmap.org/wiki/Tag:bench%3Dyes "Tag:bench=yes")` to the `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")`\-primitive.
+
+Usually a stop area has one unique UIC reference and one unique name.
+
+If only one node exists (e.g. only one node `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")` representing the pole), it is recommended to forgo the stop area relation. Instead, put the information usually stored in the relation into the node attributes.
+
+
+
+* Key: type
+  * Value: public_transport
+  * Comment: Defines this relation as a public transport relation.
+  * Recommendation: mandatory
+* Key: public_transport
+  * Value: stop_area
+  * Comment: Defines this relation as a stop area.
+  * Recommendation: mandatory
+* Key: name
+  * Value: Individual name
+  * Comment: The name by which the stop is known.
+  * Recommendation: recommended
+* Key: name:<qualifier>
+  * Value: Operator's or network's name
+  * Comment: The name by which the stop is known by a specific operator or network.
+  * Recommendation: recommended if the stop is known under different names by different operators or networks
+* Key: ref
+  * Value: Reference
+  * Comment: The reference by which the stop is known.
+  * Recommendation: recommended
+* Key: ref:<qualifier>
+  * Value: Operator's or network's reference
+  * Comment: The reference by which the stop is known by a specific operator or network.
+  * Recommendation: recommended if the stop is known under different references by different operators or networks
+* Key: uic_ref
+  * Value: UIC reference
+  * Comment: The UIC reference by which the stop is known.
+  * Recommendation: recommended if available
+* Key: uic_name
+  * Value: UIC name
+  * Comment: The UIC name by which the stop is known.
+  * Recommendation: recommended if available
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the stop.
+  * Recommendation: recommended if available
+* Key: network
+  * Value: Local / regional network
+  * Comment: Name of the network the stop belongs to.
+  * Recommendation: recommended if available
+
+
+Members of this relation are:
+
+
+
+* Role: stop
+  * Refers to: public_transport=stop_position
+  * Comment: position(s), where the vehicle stops
+  * Recommendation: recommended if available
+* Role: platform
+  * Refers to: public_transport=platform
+  * Comment: the platform(s)
+  * Recommendation: recommended if available
+* Role: none
+  * Refers to: public_transport=station
+  * Comment: the station building/area
+  * Recommendation: recommended if it belongs to the stop area
+* Role: none
+  * Refers to: amenity=*
+  * Comment: examples: shelter, bench, bicycle_parking, taxi
+  * Recommendation: recommended if available
+
+
+Route
+-----
+
+A route/service is represented by vehicles that always run the same way with the same reference number.
+
+###  [![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation") Route Direction / Variant
+
+```
+Each direction or variant of a route is represented by a separate relation.
+
+```
+
+
+Each direction of a route should be tagged as a separate [![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation"). If a route has several variants (e.g. different way at weekend), these variants should also be in separate relations.
+
+The roles `alternate`, `forward` and `backward` should not be used any more.
+
+Each direction/variant relation contains all available `[stop_position](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dstop_position "Tag:public transport=stop position")`s, `[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")`s and ways.
+
+Each stop is included with two elements (if available): first the `[stop_position](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dstop_position "Tag:public transport=stop position")` tagged with role `stop` and immediately followed by the corresponding `[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")` tagged with role `platform`. The stops (stop\_positions and platforms) should be inserted beginning with the initial stop\_position/platform and ending with the terminal stop\_position/platform.
+
+If a stop is only for exiting or entering the vehicle (common for nightly services) the roles `stop` and `platform` should be replaced with `stop_exit_only` or `stop_entry_only` and `platform_exit_only` or `platform_entry_only`.
+
+Inserting the stop\_position is important to know where the vehicle stops. Inserting the platforms is needed for correct pedestrian routing.
+
+After all the stops all the used ways should be inserted into the relation with an empty role. The ways should be inserted beginning with the way at the initial stop position and ending with the way at the terminal stop position.
+
+
+
+* Key: type
+  * Value: route
+  * Comment: Defines the relation as route.
+  * Recommendation: mandatory
+* Key: route
+  * Value: train / subway / monorail / tram / bus / trolleybus / aerialway / ferry
+  * Comment: Defines the route as train, subway, monorail, tram, bus, trolleybus, aerialway or ferry route.
+  * Recommendation: mandatory
+* Key: from
+  * Value: Initial stop
+  * Comment: Initial stop where the variant starts.
+  * Recommendation: recommended
+* Key: to
+  * Value: Terminal stop
+  * Comment: Terminal stop where the variant ends.
+  * Recommendation: recommended
+* Key: via
+  * Value: Important via stop(s)
+  * Comment: If there are several variants of a line here should be inserted an important and well known stop to clarify via where the route goes.
+  * Recommendation: recommended if several variants in one direction of a route exists
+* Key: name
+  * Value: <vehicle type> <reference number>: <initial stop> => <terminal stop>
+  * Comment: Prose description of route variant. <Vehicle type> should be identical to route=*. Example: Bus 201: Uitikon Waldegg, Bahnhof => Uitikon, Wängi
+  * Recommendation: recommended
+* Key: ref
+  * Value: Reference
+  * Comment: The reference number by which the service is known.
+  * Recommendation: recommended if no route_master=* exists, else optional
+* Key: ref:<qualifier>
+  * Value: Operator's or network's reference
+  * Comment: The reference by which the service is known by a specific operator or network.
+  * Recommendation: recommended if the service changes the reference number when crossing the network's border and no route_master=* exists
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the service.
+  * Recommendation: recommended if no route_master=* exists, else optional
+* Key: network
+  * Value: Local / regional network 
+  * Comment: Name of the network the route belongs to.
+  * Recommendation: recommended if no route_master=* exists, else optional
+* Key: colour
+  * Value: Colour
+  * Comment: Route/Service colour (HTML named colour or web colour in hexadecimal format).
+  * Recommendation: recommended if no route_master=* exists, else optional
+
+
+Members of this relation are
+
+
+
+* Role: stop / stop_exit_only / stop_entry_only
+  * Refers to: public_transport=stop_position
+  * Comment: stop positions ordered in sequence from=* .. to=* followed by the corresponding platform (if available)
+  * Recommendation: recommended if available
+* Role: platform / platform_exit_only / platform_entry_only
+  * Refers to: public_transport=platform
+  * Comment: platforms and/or poles orderedin sequence from=* .. to=* headed by the corresponding stop position
+  * Recommendation: recommended if available
+* Role: none
+  * Refers to: all s used by the vehicle
+  * Comment: in sequence from=* .. to=* representating the route of the vehicle
+  * Recommendation: mandatory
+
+
+###  [![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation") Route Master
+
+```
+The route master is a relation that contains all the direction and variant routes and the information that belongs to the whole service.
+
+```
+
+
+A master-[![relation](https://wiki.openstreetmap.org/w/images/thumb/4/48/Osm_element_relation.svg/20px-Osm_element_relation.svg.png)](/wiki/Relation "relation") contains all the important information that belongs to the service. All the variants/directions are members of this master relation.
+
+
+
+* Key: type
+  * Value: route_master
+  * Comment: Defines the relation as route_master.
+  * Recommendation: mandatory
+* Key: route_master
+  * Value: train / subway / monorail / tram / bus / trolleybus / aerialway / ferry
+  * Comment: Defines the route_master as train, subway, monorail, tram, bus, trolleybus, aerialway or ferry route_master.
+  * Recommendation: mandatory
+* Key: ref
+  * Value: Reference
+  * Comment: The reference number by which the service is known.
+  * Recommendation: recommended
+* Key: ref:<qualifier>
+  * Value: Operator's or network's reference
+  * Comment: The reference by which the service is known by a specific operator or network.
+  * Recommendation: recommended if the service changes the reference number when crossing the network's border
+* Key: name
+  * Value: <Vehicle type> <Reference number>
+  * Comment: Short prose description of route master. <Vehicle type> should be identical to route=*. Example: Bus 201
+  * Recommendation: recommended
+* Key: operator
+  * Value: Operator
+  * Comment: Name of the company that operates the service.
+  * Recommendation: recommended if available
+* Key: network
+  * Value: Local / regional network 
+  * Comment: Name of the network the route belongs to.
+  * Recommendation: recommended if available
+* Key: colour
+  * Value: Colour
+  * Comment: Route/Service colour (HTML named colour or web colour in hexadecimal format).
+  * Recommendation: recommended if available
+
+
+Members of this relation are
+
+
+|Role|Refers to                    |Comment|Recommendation|
+|----|-----------------------------|-------|--------------|
+|none|all route variant/direction s|       |mandatory     |
+
+
+Examples
+--------
+
+All the examples presented here are full featured examples. In practice after the first visit of an area one can only map the stop\_position (sitting in the bus) or the platform (walking through). So it is common only to map one node per visit, hoping another mapper or will do further work.
+
+Because the proposed tags do not get rendered at the moment, in these examples the well known tags are also added to the proposed tags. When and if this proposal gets approved and rendered, these duplicate tags will be removed.
+
+
+
+* Map: <map lat="47.337727" lon="8.4778555" z="17" w="200" h="200" />
+  * Relation:  1342737
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Simple bus stop served in only one direction.  public_transport=platform represents the pole, a platform does not exist.
+* Map: <map lat="47.3600164" lon="8.4673981" z="17" w="200" h="200" />
+  * Relation:  1320851
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Simple bus stop served in only one direction.  public_transport=platform represents the platform.
+* Map: <map lat="47.3735676" lon="8.4486366" z="17" w="200" h="200" />
+  * Relation:  1343475
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Simple bus stop served in both directions situated exactly opposite each other.
+* Map: <map lat="47.3722393" lon="8.4511578" z="17" w="200" h="200" />
+  * Relation:  1244882
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Simple bus stop served in both directions, with the opposite bus bays offset against each other.
+* Map: <map lat="47.3112" lon="8.4933664" z="17" w="200" h="200" />
+  * Relation:  1283483
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Simple bus stop where the bus has a segregated service way. The stop position is located on the highway=service.
+* Map: <map lat="47.37594" lon="8.53736" z="17" w="200" h="200" />
+  * Relation:  7572006
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: A combined bus and tram stop.
+* Map: <map lat="47.3681545" lon="8.4626128" z="17" w="200" h="200" />
+  * Relation:  1281532
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: Two bus stops close to each other.
+* Map: <map lat="47.3662" lon="8.4656" z="17" w="200" h="200" />
+  * Relation:  1274170
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: One bus stop and one railway halt close to each other.
+* Map: <map lat="47.35755" lon="8.4377" z="16" w="200" h="200" />
+  * Relation:  1279034
+  * Used Tags:  public_transport=stop_position// public_transport=platform type=public_transport+public_transport=stop_area
+  * Description: A railway station with building and parking and a bus station for several bus lines.
+* Map: 
+  * Relation:  1244886
+  * Used Tags:  public_transport=route public_transport=route_master
+  * Description: Bus route with route master. One way has simple course, the other way has two variants.
+* Map: 
+  * Relation:  1342798
+  * Used Tags:  public_transport=route public_transport=route_master
+  * Description: Bus with ring route. Initial stop and terminal stop is identical, so from=* and to=* is identical. This route has two variants.
+
+
+Compatibility with well known tags
+----------------------------------
+
+```
+The proposed tags can and do coexist with the well known tags. The usage of the new tags is recommended but not mandatory.
+
+```
+
+
+This proposal covers several already existing and well known tags related to public transport. These well known tags still have their eligibility and can and do coexist with the well known tags. The usage of the new tags is recommended but not mandatory.
+
+How the well known tags can be mapped/reused with the new public transport schema is described below:
+
+
+
+* Existing Tag: highway=bus_stop beside a way/street where buses are allowed
+  * Interpreted as: public_transport=platform
+  * Comment: This covers the pole/shelter of a bus stop and can be on a footway or sidewalk.
+* Existing Tag: highway=bus_stop on a way/street where buses are allowed
+  * Interpreted as: public_transport=stop_position + bus=yes
+  * Comment: This covers the stop position of a bus.
+* Existing Tag: amenity=bus_station tagged as node beside a way/street
+  * Interpreted as: public_transport=platform
+  * Comment: This covers the pole/shelter of a bus stop.
+* Existing Tag: amenity=bus_station tagged as node on a way/street
+  * Interpreted as: public_transport=stop_position + bus=yes
+  * Comment: This covers the stop position of a bus.
+* Existing Tag: amenity=bus_station tagged as area
+  * Interpreted as: public_transport=station + area=yes
+  * Comment: This covers the area of a bus station.
+* Existing Tag: amenity=bus_station tagged as building
+  * Interpreted as: public_transport=station + building=yes
+  * Comment: This covers a bus station building.
+* Existing Tag: highway=platform
+  * Interpreted as: public_transport=platform
+  * Comment: This covers the platform of a bus stop.
+* Existing Tag: railway=tram_stop on the rails
+  * Interpreted as: public_transport=stop_position + tram=yes
+  * Comment: This covers the stop position of a tram.
+* Existing Tag: railway=halt on the rails
+  * Interpreted as: public_transport=stop_position + train=yes
+  * Comment: This covers the stop position of a train.
+* Existing Tag: railway=platform
+  * Interpreted as: public_transport=platform
+  * Comment: This covers the platform of a tram/train stop.
+* Existing Tag: railway=station tagged as area
+  * Interpreted as: public_transport=station + area=yes
+  * Comment: This covers the area of the station.
+* Existing Tag: railway=station tagged as building
+  * Interpreted as: public_transport=station + building=yes
+  * Comment: This covers a building of a train station.
+* Existing Tag: building=train_station
+  * Interpreted as: public_transport=station + building=yes
+  * Comment: This covers a building of a train station.
+
+
+Rendering
+---------
+
+### Stop Position
+
+A stop position can be mapped as an icon depending of the vehicle type that is stopping at the position (e.g. `[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[bus_stop](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dbus_stop "Tag:highway=bus stop")`) or as a blue or red point.
+
+If the stop position is not part of a stop area then the name should get rendered too. If there is a stop area relation, the name of the stop area should get rendered instead once per stop area.
+
+### Platform
+
+Should be rendered identical to `[railway](https://wiki.openstreetmap.org/wiki/Key:railway "Key:railway")=[platform](https://wiki.openstreetmap.org/wiki/Tag:railway%3Dplatform "Tag:railway=platform")`/`[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[platform](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dplatform "Tag:highway=platform")`. Additionally also a node should get rendered.
+
+If the platform is not part of a stop area then the name should get rendered too. If there is a stop area relation, the name of the stop area should get rendered instead once per stop area.
+
+### Station
+
+If the station is a building, it should get rendered as a building. If it is an area, it can get rendered with a similar but different colour then the background.
+
+### Stop Area
+
+For simple maps the name of the stop area should get rendered instead of the names of the underlaying nodes/ways. Special public transport maps can also draw the area where the stop area is located.
+
+See also
+--------
+
+*   [User:Oxomoa/ÖPNV-Schema](https://wiki.openstreetmap.org/wiki/User:Oxomoa/%C3%96PNV-Schema "User:Oxomoa/ÖPNV-Schema") (German)
+*   [User:Oxomoa/Public\_transport\_schema](https://wiki.openstreetmap.org/wiki/User:Oxomoa/Public_transport_schema "User:Oxomoa/Public transport schema") (English)
+*   [RU:Рисование общественного транспорта по схеме Oxomoa](https://wiki.openstreetmap.org/wiki/RU:%D0%A0%D0%B8%D1%81%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BE%D0%B1%D1%89%D0%B5%D1%81%D1%82%D0%B2%D0%B5%D0%BD%D0%BD%D0%BE%D0%B3%D0%BE_%D1%82%D1%80%D0%B0%D0%BD%D1%81%D0%BF%D0%BE%D1%80%D1%82%D0%B0_%D0%BF%D0%BE_%D1%81%D1%85%D0%B5%D0%BC%D0%B5_Oxomoa "RU:Рисование общественного транспорта по схеме Oxomoa") (Russian)
+*   [Proposed\_features/unified\_stoparea](https://wiki.openstreetmap.org/wiki/Proposed_features/unified_stoparea "Proposed features/unified stoparea")
+*   [Proposed features/Stop Area](https://wiki.openstreetmap.org/wiki/Proposed_features/Stop_Area "Proposed features/Stop Area")
+
+*   [Tag:highway=bus\_stop](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dbus_stop "Tag:highway=bus stop")
+*   [Talk:Tag:highway=bus\_stop](https://wiki.openstreetmap.org/wiki/Talk:Tag:highway%3Dbus_stop "Talk:Tag:highway=bus stop")
+*   [DE:Tag:highway=bus\_stop](https://wiki.openstreetmap.org/wiki/DE:Tag:highway%3Dbus_stop "DE:Tag:highway=bus stop")
+*   [DE\_talk:Tag:highway=bus\_stop](https://wiki.openstreetmap.org/wiki/DE_talk:Tag:highway%3Dbus_stop "DE talk:Tag:highway=bus stop")
+*   [Public\_Transport](https://wiki.openstreetmap.org/wiki/Public_Transport "Public Transport")
+*   [Relation:route#Public\_Transport\_Routes](about:/wiki/Relation:route#Public_Transport_Routes "Relation:route")
+
+Voting
+------
+
+Voting ended at 2011-04-20.
+
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Teddych](https://wiki.openstreetmap.org/wiki/User:Teddych "User:Teddych") 08:36, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Johnwhelan](https://wiki.openstreetmap.org/wiki/User:Johnwhelan "User:Johnwhelan") 09:02, 31 March 2011 (EST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[TobWen](https://wiki.openstreetmap.org/wiki/User:TobWen "User:TobWen") 08:45, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[ipodolsk](https://wiki.openstreetmap.org/wiki/User:Ipodolsk "User:Ipodolsk") 09:56, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Zverik](https://wiki.openstreetmap.org/wiki/User:Zverik "User:Zverik") 10:04, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Bernd](https://wiki.openstreetmap.org/wiki/User:Berndw "User:Berndw") 10:17, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Kolen](https://wiki.openstreetmap.org/wiki/User:Kolen "User:Kolen") 10:20, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Xificurk](https://wiki.openstreetmap.org/wiki/User:Xificurk "User:Xificurk") 09:22, 31 March 2011 (UTC)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Ilis](https://wiki.openstreetmap.org/wiki/User:Ilis "User:Ilis") 10:23, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[mdk](https://wiki.openstreetmap.org/wiki/User:Kleidt "User:Kleidt") 10:27, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[dkiselev](https://wiki.openstreetmap.org/wiki/User:Dkiselev "User:Dkiselev")10:34, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Hind](https://wiki.openstreetmap.org/wiki/User:Hind "User:Hind") 10:36, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Eugene](https://wiki.openstreetmap.org/wiki/User:Eugene "User:Eugene") 10:44, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Vrs](https://wiki.openstreetmap.org/wiki/User:Vrs "User:Vrs") 10:53, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[MetiorErgoSum](https://wiki.openstreetmap.org/wiki/User:MetiorErgoSum "User:MetiorErgoSum") 10:55, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Spontex](https://wiki.openstreetmap.org/wiki/User:Spontex "User:Spontex") 10:05, 31 March 2011 (UTC)
+*   [![I oppose this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Symbol_oppose_vote.svg/20px-Symbol_oppose_vote.svg.png)](/wiki/File:Symbol_oppose_vote.svg "I oppose this proposal") I **oppose** this proposal. This is much too complicated. We need to make best use of existing tags, not invent a whole new tagging system. --[RichardMann](https://wiki.openstreetmap.org/wiki/User:RichardMann "User:RichardMann") 11:00, 31 March 2011 (BST)
+*   [![I oppose this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Symbol_oppose_vote.svg/20px-Symbol_oppose_vote.svg.png)](/wiki/File:Symbol_oppose_vote.svg "I oppose this proposal") I **oppose** this proposal. I'm of the same opinion like RichardMann.--[R-michael](https://wiki.openstreetmap.org/w/index.php?title=User:R-michael&action=edit&redlink=1 "User:R-michael (page does not exist)") 17:50, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. It's about time we come up with a consistent way of mapping PT and I know Teddych already tried to 'reuse' the existing tags, so it's probably better to start from scratch. I hope this will get rendered soon! --[Polyglot](https://wiki.openstreetmap.org/wiki/User:Polyglot "User:Polyglot") 11:12, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[vsandre](https://wiki.openstreetmap.org/wiki/User:Vsandre "User:Vsandre") 11:32, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[EdLoach](https://wiki.openstreetmap.org/wiki/User:EdLoach "User:EdLoach") 11:37, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Artyomka](https://wiki.openstreetmap.org/wiki/User:Artyomka "User:Artyomka") 11:59, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Derick Rethans](https://wiki.openstreetmap.org/wiki/User:Derick "User:Derick") 12:10, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Dieterdreist](https://wiki.openstreetmap.org/wiki/User:Dieterdreist "User:Dieterdreist") 12:21, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Ueliw0](https://wiki.openstreetmap.org/w/index.php?title=User:Ueliw0&action=edit&redlink=1 "User:Ueliw0 (page does not exist)") 12:27, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Guerda](https://wiki.openstreetmap.org/wiki/User:Guerda "User:Guerda") 12:34, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Dl8utl](https://wiki.openstreetmap.org/w/index.php?title=User:Dl8utl&action=edit&redlink=1 "User:Dl8utl (page does not exist)") 12:37, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Almich](https://wiki.openstreetmap.org/wiki/User:Almich "User:Almich") 12:41, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Kaitu](https://wiki.openstreetmap.org/wiki/User:Kaitu "User:Kaitu") 13:11, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. -- [Pecisk](https://wiki.openstreetmap.org/w/index.php?title=User:Pecisk&action=edit&redlink=1 "User:Pecisk (page does not exist)") 13:20, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Landwirt](https://wiki.openstreetmap.org/wiki/User:Landwirt "User:Landwirt") 13:33, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[Flaimo](https://wiki.openstreetmap.org/wiki/User:Flaimo "User:Flaimo") 13:57, 31 March 2011 (BST)
+*   [![I oppose this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Symbol_oppose_vote.svg/20px-Symbol_oppose_vote.svg.png)](/wiki/File:Symbol_oppose_vote.svg "I oppose this proposal") I **oppose** this proposal. This is much too complicated. We need to make best use of existing tags, we didn't need such a complex new tagging system. -- [ReLuc](https://wiki.openstreetmap.org/w/index.php?title=User:ReLuc&action=edit&redlink=1 "User:ReLuc (page does not exist)")13:58, 31 March 2011 (BST)
+*   [![I approve this proposal](https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Symbol_support_vote.svg/20px-Symbol_support_vote.svg.png)](/wiki/File:Symbol_support_vote.svg "I approve this proposal") I **approve** this proposal. --[1piedsurTerre](https://wiki.openstreetmap.org/wiki/User:1piedsurTerre "User:1piedsurTerre") 14:09, 31 March 2011 (BST)
+*   I **don't like** this proposal. I find many problems in this proposal which seems not mature enough for a vote :  
+    1\. your replace `[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[platform](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dplatform "Tag:highway=platform")` and `[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[bus_stop](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dbus_stop "Tag:highway=bus stop")` by `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")`. How do I know if the platform is for a bus or a tramway ? And in the daily language, people go to a 'bus stop' not to a 'platform'. Sounds that it is a proposal done by and for professionals, not for the average public of OSM contributors. And the wiki said until know that the 'stop' was about the area for passengers (user point of view), not the 'stop' for the bus itself (operator point of view). You change this fundamental definition and it will confuse a lot since many mappers tag as public transport users, not as operators.  
+    2\. You suggest to replace `[amenity](https://wiki.openstreetmap.org/wiki/Key:amenity "Key:amenity")=[bus_station](https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dbus_station "Tag:amenity=bus station")` by `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[station](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dstation "Tag:public transport=station")` + `[area](https://wiki.openstreetmap.org/wiki/Key:area "Key:area")=[yes](https://wiki.openstreetmap.org/wiki/Tag:area%3Dyes "Tag:area=yes")`. This is an overuse of the current tag `[area](https://wiki.openstreetmap.org/wiki/Key:area "Key:area")=*`. Once you have a polygon, you don't need a tag `[area](https://wiki.openstreetmap.org/wiki/Key:area "Key:area")=[yes](https://wiki.openstreetmap.org/wiki/Tag:area%3Dyes "Tag:area=yes")` in most of the current OSM tags (basically it is just required for highways because we don't know if a closed highway is a loop or a surface).  
+    3\. I don't understand why you add `[train](https://wiki.openstreetmap.org/wiki/Key:train "Key:train")=[yes](https://wiki.openstreetmap.org/wiki/Tag:train%3Dyes "Tag:train=yes")` on your `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[stop_position](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dstop_position "Tag:public transport=stop position")`. If the node is on the railway, we know it is a train, not a bus !  
+    4\. in the section 'Compatibility with well known tags', you suggest to replace `[highway](https://wiki.openstreetmap.org/wiki/Key:highway "Key:highway")=[bus_stop](https://wiki.openstreetmap.org/wiki/Tag:highway%3Dbus_stop "Tag:highway=bus stop")` by `[public_transport](https://wiki.openstreetmap.org/wiki/Key:public_transport "Key:public transport")=[platform](https://wiki.openstreetmap.org/wiki/Tag:public_transport%3Dplatform "Tag:public transport=platform")`. It's only true for those how tagged the bus-stop for passangers, not for those who tagged the node on the highway. Both co-existed in the past with the same tag and you ignore it in this paragraph.  
+    5\. asking a relation for each variant of the route is over complicated. The method of how routes relations are already breaking highways is already stupid but that's another story. -- [Pieren](https://wiki.openstreetmap.org/wiki/User:Pieren "User:Pieren") 14:26, 31 March 2011 (BST)
+
+to 3.: _"If the node is on the railway, we know it is a train, not a bus!"_ Sure? In Karlsruhe bus and tram/light\_rail share some nodes and also train and light\_rail share some nodes and at [http://commons.wikimedia.org/wiki/File:25a\_Bf\_Zwickau\_Zentrum,\_VT45\_VB.jpg](http://commons.wikimedia.org/wiki/File:25a_Bf_Zwickau_Zentrum,_VT45_VB.jpg) there may stop also a bus instead of the train ... --[Mueck](https://wiki.openstreetmap.org/wiki/User:Mueck "User:Mueck") 18:05, 31 March 2011 (BST)
+
+okay for 3. you ask all bus stops and trains stop to add bus=yes or train=yes because you can have a bus stoping on a railway. I though that we only map exceptions in OSM... --[Pieren](https://wiki.openstreetmap.org/wiki/User:Pieren "User:Pieren") 21:01, 31 March 2011 (BST)
+
+where do you get this from? Generally there are no defaults (besides some exceptions like layer=0) for omitted keys. --[Dieterdreist](https://wiki.openstreetmap.org/wiki/User:Dieterdreist "User:Dieterdreist") 17:33, 6 April 2011 (BST)

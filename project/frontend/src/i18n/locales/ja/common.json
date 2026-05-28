@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "京都メトロ",
+    "tagline": "公共交通ルート案内",
+    "footer": "IT3160 — 京都地下鉄経路探索"
+  },
+  "roles": {
+    "user": "利用者",
+    "admin": "管理者"
+  },
+  "actions": {
+    "close": "閉じる",
+    "clear": "クリア",
+    "search": "検索",
+    "cancel": "キャンセル",
+    "retry": "再試行"
+  }
+}

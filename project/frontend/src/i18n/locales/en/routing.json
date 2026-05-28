@@ -1,0 +1,16 @@
+{
+  "title": "FIND ROUTE",
+  "from": "From",
+  "to": "To",
+  "fromPlaceholder": "Origin stop or location...",
+  "toPlaceholder": "Destination stop or location...",
+  "useLocation": "Use my location",
+  "swapDirections": "Swap directions",
+  "modes": {
+    "subway": "Subway",
+    "bus": "Bus",
+    "walk": "Walking"
+  },
+  "selectPoints": "Select Points",
+  "selectPointsHint": "Click 'Select Points' and then click 2 locations on the map to find the fastest route."
+}

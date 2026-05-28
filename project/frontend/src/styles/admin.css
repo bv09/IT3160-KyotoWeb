@@ -1,0 +1,93 @@
+/* ══════════════════════════════════════════════════════════
+   Admin Panel — graph toggle, stop mode, blocked list
+   ══════════════════════════════════════════════════════════ */
+
+.admin-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+/* Stop Mode Hint */
+
+.hint-box {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #fbbf24;
+  line-height: 1.5;
+  margin-top: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.hint-box.hidden {
+  display: none;
+}
+
+/* Blocked List */
+
+.blocked-list-box {
+  margin-top: 12px;
+  background: rgba(220, 38, 38, 0.07);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+.blocked-list-box.hidden {
+  display: none;
+}
+
+.blocked-list {
+  margin: 6px 0 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.blocked-item {
+  padding: 5px 0;
+  font-size: 11px;
+  color: #f87171;
+  border-bottom: 1px solid rgba(248, 113, 113, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.blocked-item:last-child {
+  border-bottom: none;
+}
+
+.blocked-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-restore {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 4px;
+  color: rgba(248, 113, 113, 0.6);
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.btn-restore:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  border-color: #f87171;
+}

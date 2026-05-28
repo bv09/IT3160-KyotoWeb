@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def get_engine(**kwargs):
         # Verify connection
         try:
             with _engine.connect() as conn:
-                conn.execute(1)
+                conn.execute(text("SELECT 1"))
             logger.info("Database connection established: %s", DATABASE_URL)
         except Exception:
             logger.exception("Cannot connect to database at %s", DATABASE_URL)

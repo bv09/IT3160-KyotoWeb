@@ -21,6 +21,9 @@ docker-down:
 db-init:
 	python -c "from backend.db.models import Base; from backend.db.engine import get_engine; Base.metadata.create_all(get_engine()); print('Tables created.')"
 
+alembic-init:
+	alembic init backend/alembic
+
 db-migrate:
 	alembic upgrade head
 

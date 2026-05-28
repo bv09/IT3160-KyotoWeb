@@ -1,0 +1,227 @@
+/* ══════════════════════════════════════════════════════════
+   Results Panel — summary stats, leg cards, turn-by-turn
+   ══════════════════════════════════════════════════════════ */
+
+.results-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+.results-panel.hidden {
+  display: none;
+}
+
+/* Summary */
+
+.result-summary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.result-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-val {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #a5b4fc;
+}
+
+.stat-lbl {
+  display: block;
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Leg Cards */
+
+.leg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leg-card {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: background var(--transition), border var(--transition);
+}
+
+.leg-card:hover {
+  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(79, 70, 229, 0.3);
+}
+
+.leg-bar {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.leg-content {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.leg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.leg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.leg-icon {
+  font-size: 14px;
+}
+
+.leg-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.leg-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.leg-stations {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.leg-from,
+.leg-to {
+  padding: 2px 0;
+}
+
+.leg-dist {
+  font-size: 9px;
+  color: var(--color-text-muted);
+}
+
+.leg-walk-info {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+/* Intermediate stops */
+
+.leg-stops {
+  margin-top: 4px;
+}
+
+.btn-expand {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 2px 0;
+}
+
+.btn-expand:hover {
+  text-decoration: underline;
+}
+
+.stop-list {
+  margin-top: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.stop-list.hidden {
+  display: none;
+}
+
+.stop-item {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  padding: 2px 0 2px 4px;
+  border-left: 2px solid var(--color-border);
+}
+
+/* Loading skeletons */
+
+.results-loading {
+  padding: 8px 0;
+}
+
+.skeleton-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  animation: pulse 1.5s ease infinite;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+/* Error & Empty */
+
+.results-error,
+.results-empty {
+  padding: 8px 0;
+}
+
+.error-msg {
+  font-size: 11px;
+  color: #f87171;
+  margin-bottom: 8px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}

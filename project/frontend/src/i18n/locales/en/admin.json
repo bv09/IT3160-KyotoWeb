@@ -1,0 +1,12 @@
+{
+  "title": "GRAPH MANAGEMENT",
+  "showGraph": "Show Graph",
+  "hideGraph": "Hide Graph",
+  "stops": "STOPS",
+  "enableStopMode": "Enable Stop Mode",
+  "disableStopMode": "Disable Stop Mode",
+  "stopModeHint": "Stop mode active. Click a station on the map to toggle blocked status.",
+  "blockedStops": "Blocked Stops",
+  "restoreAll": "Restore All",
+  "noBlockedStops": "No stops are currently blocked."
+}

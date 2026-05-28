@@ -18,6 +18,7 @@ from flask_cors import CORS
 
 from backend.config import config
 from backend.routes.api import api_bp, _build_static_graph_data
+from backend.routes.api_v2 import api_v2_bp
 from backend.services.osm_loader import load_graph
 from backend.utils.nearest_points import build_spatial_index
 
@@ -34,13 +35,14 @@ def create_app(config_name: str | None = None) -> Flask:
 
     app = Flask(
         __name__,
-        static_folder="../frontend",
+        static_folder="../frontend/dist",
         static_url_path="",
     )
     app.config.from_object(config[config_name])
 
     CORS(app)
     app.register_blueprint(api_bp)
+    app.register_blueprint(api_v2_bp)
 
     use_db = app.config.get("USE_DATABASE", False)
 
@@ -90,115 +92,55 @@ def _init_from_json_file(app: Flask) -> None:
 def _init_from_database(app: Flask) -> None:
     """Load graph and spatial index from PostgreSQL/PostGIS.
 
-    Reads the ``edges``, ``stops``, and ``routes`` tables, builds the
-    in-memory ``SubwayGraph``, and materializes the KDTree spatial index.
+    Delegates to :mod:`backend.services.graph_builder` for the heavy
+    lifting of reading edge/stop/route data from the database and
+    constructing the in-memory graph.
     """
+    from backend.services.graph_builder import build_graph_from_database
+
+    graph = build_graph_from_database()
+    tree, node_ids = build_spatial_index(graph)
+
+    app.config["GRAPH"] = graph
+    app.config["KDTREE"] = tree
+    app.config["NODE_IDS"] = node_ids
+
+    # MAP_DATA: serialize basic graph info for the frontend
     from backend.db.engine import get_session
-    from backend.db.repository import (
-        get_all_edges,
-        get_all_routes,
-        get_blocked_stop_ids,
-        get_route_stops,
-        get_stops_by_ids,
-    )
-    from backend.models.graph import RouteInfo, SubwayGraph
-    from backend.utils.convert_to_time import convert_walk_time
+    from backend.db.repository import get_stops_by_ids
 
     session = get_session()
     try:
-        # ── Build graph ──────────────────────────────────────────
-        graph = SubwayGraph()
-
-        # Load stops
-        edges = get_all_edges(session)
-        from_ids = {e.from_id for e in edges}
-        to_ids = {e.to_id for e in edges}
-        all_stop_ids = from_ids | to_ids
-        stops = get_stops_by_ids(session, all_stop_ids)
-        stop_by_id = {s.id: s for s in stops}
-
-        for s in stops:
-            graph.register_node_coord(s.id, s.lat, s.lon)
-            if s.stop_type == "stop_position":
-                graph.register_stop(s.id, s.lat, s.lon, s.name_en or s.name)
-            elif s.stop_type == "entrance":
-                graph.register_entrance(s.id, s.lat, s.lon, s.name_en or s.name)
-
-        # Load edges
-        for e in edges:
-            time_min = e.travel_time_s / 60.0
-            if e.edge_type == "subway":
-                graph.add_edge(
-                    e.from_id, e.to_id, e.distance_m, time_min,
-                    edge_type=e.edge_type, route_id=e.route_id,
-                )
-            else:
-                graph.add_undirected_edge(
-                    e.from_id, e.to_id, e.distance_m, time_min,
-                    edge_type=e.edge_type,
-                )
-
-            if e.route_id is not None:
-                graph.register_way(e.from_id, e.route_id)
-                graph.register_way(e.to_id, e.route_id)
-
-        # Load routes
-        routes = get_all_routes(session)
-        for r in routes:
-            graph.register_route(r.id, RouteInfo(
-                osm_id=r.osm_id,
-                ref=r.ref,
-                name=r.name,
-                route_type=r.route_type,
-                colour=r.colour,
-                network=r.network,
-                operator=r.operator,
-                from_stop=r.from_stop,
-                to_stop=r.to_stop,
-            ))
-            # Populate stop_routes map
-            route_stops = get_route_stops(session, r.id)
-            for rs in route_stops:
-                graph.register_stop_route(rs.stop_id, r.id)
-
-        # Load blocked stops
-        blocked_ids = get_blocked_stop_ids(session)
-        for bid in blocked_ids:
-            graph.blocked_node[bid] = True
-
-        # ── Build spatial index ──────────────────────────────────
-        tree, node_ids = build_spatial_index(graph)
-
-        app.config["GRAPH"] = graph
-        app.config["KDTREE"] = tree
-        app.config["NODE_IDS"] = node_ids
-
-        # MAP_DATA: serialize basic graph info for the frontend
-        app.config["MAP_DATA"] = {
-            "elements": [
-                {
-                    "type": "node",
-                    "id": s.id,
-                    "lat": s.lat,
-                    "lon": s.lon,
-                    "tags": {
-                        "name": s.name_en or s.name,
-                        "railway": "stop" if s.stop_type == "stop_position" else "subway_entrance",
-                    },
-                }
-                for s in stop_by_id.values()
-            ]
+        stop_ids = {
+            nid for nid in graph.stop_map
+            if isinstance(nid, int)
+        } | {
+            nid for nid in graph.entrance_map
+            if isinstance(nid, int)
         }
-
-        app.config["GRAPH_EDGES_STATIC"] = _build_static_graph_data(graph)
-
-        logger.info(
-            "Graph loaded from database (%s), %d routes.",
-            repr(graph),
-            len(routes),
-        )
+        stops = get_stops_by_ids(session, stop_ids) if stop_ids else []
     finally:
         session.close()
+
+    app.config["MAP_DATA"] = {
+        "elements": [
+            {
+                "type": "node",
+                "id": s.id,
+                "lat": s.lat,
+                "lon": s.lon,
+                "tags": {
+                    "name": s.name_en or s.name,
+                    "railway": "stop" if s.stop_type == "stop_position" else "subway_entrance",
+                },
+            }
+            for s in stops
+        ]
+    }
+
+    app.config["GRAPH_EDGES_STATIC"] = _build_static_graph_data(graph)
+
+    logger.info("Graph loaded from database (%s).", repr(graph))
 
 
 if __name__ == "__main__":

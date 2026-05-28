@@ -22,6 +22,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    BigInteger
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, relationship
 
@@ -74,7 +75,7 @@ class Stop(Base):
     __tablename__ = "stops"
 
     id: Mapped[int] = Column(Integer, primary_key=True, autoincrement=True)
-    osm_id: Mapped[int] = Column(Integer, unique=True, nullable=False, index=True)
+    osm_id: Mapped[int] = Column(BigInteger, unique=True, nullable=False, index=True)
     name: Mapped[str] = Column(String(255), nullable=False, default="")
     name_en: Mapped[str] = Column(String(255), nullable=False, default="")
 

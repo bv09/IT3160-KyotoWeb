@@ -1,7 +1,10 @@
-"""Script tải dữ liệu đường sắt Kyoto từ Overpass API.
+"""Fetch Kyoto transit data from the Overpass API.
 
-Sử dụng exponential backoff khi gặp lỗi mạng,
-thay vì retry vô hạn như phiên bản cũ.
+Queries for the full OSM Public Transport Schema: subway, bus, and tram
+routes with stop positions, platforms, station entrances, stop_area
+relations, and pedestrian ways for walking segments.
+
+Uses exponential backoff on network errors.
 """
 
 import json
@@ -18,11 +21,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Mặc định lưu vào thư mục data/ ở gốc project
 DEFAULT_OUTPUT = "data/raw_osm_data.json"
+DEFAULT_OUTPUT_V2 = "data/raw_osm_data_v2.json"
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
+# ── Legacy query (v1, subway‑only) ─────────────────────────────────
 QUERY = """
     [out:json][timeout:180];
     area[name="京都市"][admin_level="7"]->.kyoto;
@@ -58,78 +62,127 @@ QUERY = """
     way[highway~"footway|pedestrian|path|sidewalk|steps|corridor|residential|living//street|service|unclassified|tertiary|secondary|primary|track|alley"]
     [access!~"no|private"]
     (area.kyoto);
-    out geom; 
+    out geom;
 """
 
-HEADERS = {"User-Agent": "KyotoPathfindingApp/1.0 (HUST Student Project)"}
+# ── Enhanced query (v2, full OSM PT schema) ────────────────────────
+QUERY_V2 = """
+    [out:json][timeout:300];
+    area[name="京都市"][admin_level="7"]->.kyoto;
+
+    // ── All transit routes (subway, bus, tram) ─────────────────────
+    relation[route~"subway|bus|tram|train|light_rail"](area.kyoto)->.routes;
+    .routes out geom;
+
+    // ── Route master relations ─────────────────────────────────────
+    relation[route_master~"subway|bus|tram|train|light_rail"](area.kyoto);
+    out body;
+
+    // ── Stop positions referenced by routes ────────────────────────
+    node(r.routes)[public_transport=stop_position](area.kyoto);
+    out body geom;
+
+    // ── Platforms referenced by routes ─────────────────────────────
+    way(r.routes)[public_transport=platform](area.kyoto);
+    out body geom;
+    node(r.routes)[public_transport=platform](area.kyoto);
+    out body geom;
+
+    // ── Legacy railway stop/station tags ───────────────────────────
+    node[railway~"stop|station|halt|tram_stop"](area.kyoto)->.legacy_stops;
+    .legacy_stops out body geom;
+
+    // ── stop_area relations ────────────────────────────────────────
+    relation[type="public_transport"]
+            [public_transport="stop_area"]
+            (area.kyoto)->.stop_areas;
+    .stop_areas out body geom;
+
+    // ── Subway entrances ───────────────────────────────────────────
+    node[railway=subway_entrance](area.kyoto);
+    out body geom;
+
+    // ── Pedestrian network (for first/last mile walking) ──────────
+    way[highway~"footway|pedestrian|path|steps|residential|living_street|service|unclassified|tertiary|secondary|primary"]
+       [access!~"no|private"]
+       (area.kyoto);
+    out geom;
+"""
+
+HEADERS = {"User-Agent": "KyotoPathfindingApp/2.0 (HUST Student Project)"}
 
 MAX_RETRIES = 5
 INITIAL_BACKOFF = 2  # seconds
 
 
-def fetch_and_save_osm_data(output_path: str = DEFAULT_OUTPUT) -> None:
-    """Tải dữ liệu Kyoto từ Overpass API và lưu vào file JSON.
-
-    Args:
-        output_path: Đường dẫn file JSON đầu ra.
-
-    Raises:
-        requests.exceptions.RequestException: Sau khi đã retry MAX_RETRIES lần.
-    """
-    # Đảm bảo thư mục cha tồn tại
+def _fetch(query: str, output_path: str) -> None:
+    """Post *query* to Overpass and save result to *output_path*."""
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-    backoff = INITIAL_BACKOFF
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            logger.info(
-                "Đang gọi Overpass API (lần thử %d/%d)...", attempt, MAX_RETRIES
-            )
+            logger.info("Overpass request attempt %d/%d ...", attempt, MAX_RETRIES)
 
             response = requests.post(
                 OVERPASS_URL,
                 headers=HEADERS,
-                data={"data": QUERY},
+                data={"data": query},
                 timeout=90,
             )
             response.raise_for_status()
             data = response.json()
 
-            # Thống kê phần tử
             _log_statistics(data)
 
-            # Lưu file JSON
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=4)
 
-            logger.info("Đã lưu dữ liệu vào: %s", output_path)
+            logger.info("Saved to: %s", output_path)
             return
 
         except requests.exceptions.RequestException as error:
-            logger.warning("Lỗi lần thử %d: %s", attempt, error)
+            logger.warning("Error on attempt %d: %s", attempt, error)
             if attempt < MAX_RETRIES:
-                logger.info("Chờ %ds trước khi thử lại...", backoff)
+                logger.info("Waiting %ds before retry...", backoff := INITIAL_BACKOFF)
                 time.sleep(backoff)
-                backoff = 2
             else:
-                logger.error("Đã hết số lần thử lại (%d).", MAX_RETRIES)
+                logger.error("Max retries (%d) exhausted.", MAX_RETRIES)
                 raise
 
 
+def fetch_and_save_osm_data(output_path: str = DEFAULT_OUTPUT) -> None:
+    """Fetch Kyoto transit data using the legacy (subway-only) query."""
+    _fetch(QUERY, output_path)
+
+
+def fetch_and_save_osm_data_v2(output_path: str = DEFAULT_OUTPUT_V2) -> None:
+    """Fetch Kyoto transit data using the enhanced (full PT schema) query."""
+    _fetch(QUERY_V2, output_path)
+
+
 def _log_statistics(data: dict) -> None:
-    """Log thống kê số lượng phần tử trong dữ liệu OSM."""
+    """Log summary statistics about the fetched OSM data."""
     elements = data.get("elements", [])
-    counter = Counter()
+    counter: Counter = Counter()
 
     for element in elements:
         counter[element.get("type", "unknown")] += 1
         if element.get("type") == "node" and "tags" in element:
-            railway = element["tags"].get("railway")
+            tags = element["tags"]
+            railway = tags.get("railway")
             if railway:
                 counter[f"railway_{railway}"] += 1
+            pt = tags.get("public_transport")
+            if pt:
+                counter[f"pt_{pt}"] += 1
+        if element.get("type") == "relation" and "tags" in element:
+            t = element["tags"]
+            if t.get("type") == "route":
+                counter["route_relations"] += 1
+            if t.get("public_transport") == "stop_area":
+                counter["stop_area_relations"] += 1
 
-    logger.info("Tải thành công %d phần tử từ OSM.", len(elements))
+    logger.info("Fetched %d elements.", len(elements))
     logger.info(
         "  Nodes: %d, Ways: %d, Relations: %d",
         counter.get("node", 0),
@@ -137,9 +190,15 @@ def _log_statistics(data: dict) -> None:
         counter.get("relation", 0),
     )
     logger.info(
-        "  Stations: %d, Stops: %d",
+        "  Stations: %d, Stops: %d, Platforms: %d",
         counter.get("railway_station", 0),
         counter.get("railway_stop", 0),
+        counter.get("pt_platform", 0),
+    )
+    logger.info(
+        "  Route relations: %d, Stop areas: %d",
+        counter.get("route_relations", 0),
+        counter.get("stop_area_relations", 0),
     )
 
 

@@ -1,0 +1,444 @@
+Selected Files Directory Structure:
+
+└── ./
+    ├── a-star.ts
+    ├── bfs.ts
+    ├── dfs.ts
+    ├── greedy.ts
+    └── path-tracer.ts
+
+
+
+--- a-star.ts ---
+
+import { generateGrid } from '@pathFinder/helpers/grid.helper';
+import { SearchAlgoProps, Cell, CellType } from '@pathFinder/models';
+
+interface CostCell extends Cell {
+  f: number;
+  g: number;
+  h: number;
+}
+
+function getCostGrid(rows: number, cols: number): CostCell[][] {
+  return Array.from({ length: rows }, (_, row) =>
+    Array.from({ length: cols }, (_, col) => ({ row, col, f: 0, g: 0, h: 0 }))
+  );
+}
+
+function getManhattanDistance(cell: Cell, exit: Cell) {
+  return Math.abs(cell.row - exit.row) + Math.abs(cell.col - exit.col);
+}
+
+function getMinimumCostCell(costCells: CostCell[]) {
+  let idx = 0;
+  let minCostCell = costCells[idx];
+  for (let i = 1; i < costCells.length; i++) {
+    if (
+      costCells[i].f < minCostCell.f ||
+      (costCells[i].f === minCostCell.f && costCells[i].h < minCostCell.h)
+    ) {
+      minCostCell = costCells[i];
+      idx = i;
+    }
+  }
+
+  return { minCostCell, idx };
+}
+
+function updateCostCell( // update cost cell
+  costCell: CostCell,
+  newCostCell: CostCell,
+  open: CostCell[]
+) {
+  if (open.includes(costCell)) {
+    if (newCostCell.g >= costCell.g) {
+      return false;
+    }
+  }
+
+  costCell.f = newCostCell.f;
+  costCell.g = newCostCell.g;
+  costCell.h = newCostCell.h;
+  return true;
+}
+
+function exploreNeighbors(
+  grid: CellType[][],
+  costGrid: CostCell[][],
+  open: CostCell[],
+  closed: Set<CostCell>,
+  parents: Cell[][],
+  current: CostCell,
+  exit: Cell
+) {
+  const rows = costGrid.length;
+  const cols = costGrid[0].length;
+  const neighbors = [
+    { row: current.row - 1, col: current.col },
+    { row: current.row, col: current.col + 1 },
+    { row: current.row + 1, col: current.col },
+    { row: current.row, col: current.col - 1 },
+  ];
+
+  for (const neighbor of neighbors) {
+    const { row, col } = neighbor;
+    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+      continue;
+    }
+
+    const cellType = grid[row][col];
+    const costCell = costGrid[row][col];
+    if (cellType === CellType.wall || closed.has(costCell)) {
+      continue;
+    }
+
+    const g = current.g + 1;
+    const h = getManhattanDistance(neighbor, exit);
+    const f = g + h;
+    const isUpdated = updateCostCell(costCell, { row, col, g, h, f }, open);
+
+    if (isUpdated) {
+      parents[row][col] = { row: current.row, col: current.col };
+
+      if (!open.includes(costCell)) {
+        open.push(costCell);
+      }
+    }
+  }
+}
+
+// A* algorithm
+export async function aStar({
+  grid: stateGrid,
+  entry,
+  exit,
+  updateCells,
+}: SearchAlgoProps) {
+  const grid = stateGrid.map((row) => row.slice());
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const costGrid = getCostGrid(rows, cols);
+  const open: CostCell[] = [];
+  const closed = new Set([costGrid[entry.row][entry.col]]);
+  const parents = generateGrid<Cell>(rows, cols, null);
+
+  exploreNeighbors(
+    grid,
+    costGrid,
+    open,
+    closed,
+    parents,
+    costGrid[entry.row][entry.col],
+    exit
+  );
+
+  while (open.length > 0) {
+    const { minCostCell, idx } = getMinimumCostCell(open);
+    if (minCostCell.row === exit.row && minCostCell.col === exit.col) {
+      return { grid, parents };
+    }
+
+    open.splice(idx, 1);
+    closed.add(minCostCell);
+    await updateCells(grid, minCostCell, CellType.visited);
+    exploreNeighbors(grid, costGrid, open, closed, parents, minCostCell, exit);
+  }
+
+  return { grid, parents: null };
+}
+
+
+--- bfs.ts ---
+
+import { SearchAlgoProps, Cell, CellType } from '@pathFinder/models';
+import { generateGrid } from '@pathFinder/helpers/grid.helper';
+
+function getAddToQueueIfAllowedFunction(
+  grid: number[][],
+  parents: Cell[][],
+  visited: boolean[][],
+  queue: Cell[]
+) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+
+  return function (row: number, col: number, nextX: number, nextY: number) {
+    // check if the next coordinate is within the grid
+    if (nextX >= 0 && nextY >= 0 && nextX < rows && nextY < cols) {
+      // the next coordinate should neither be visited before nor should be a wall
+      if (!visited[nextX][nextY] && grid[nextX][nextY] !== 3) {
+        queue.push({ row: nextX, col: nextY }); // push to the queue
+        parents[nextX][nextY] = { row, col }; // update its parents
+        visited[nextX][nextY] = true; // mark as visited
+      }
+    }
+  };
+}
+
+// The Breadth First Search Algorithm
+export async function breadthFirstSearch({
+  grid: stateGrid,
+  entry,
+  exit,
+  updateCells,
+}: SearchAlgoProps) {
+  const grid = stateGrid.map((row) => row.slice());
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const visited = generateGrid(rows, cols, false); // initalize visited arrays
+  const parents = generateGrid<Cell>(rows, cols, null); // initalize parents arrays
+
+  const queue = [entry]; // Add entry coordinate to the queue
+  visited[entry.row][entry.col] = true; // mark it as visited
+
+  // get the function for reuse with coordinates
+  const addToQueueIfAllowed = getAddToQueueIfAllowedFunction(
+    grid,
+    parents,
+    visited,
+    queue
+  );
+
+  while (queue.length) {
+    // iterate till queue items are over
+    const length = queue.length;
+
+    const loopQueue = []; // loopQueue is used for marking the coordinates after each inner iteration
+    for (let k = 0; k < length; k++) {
+      const value = queue.shift() as Cell;
+
+      if (value.row === exit.row && value.col === exit.col) {
+        // if exit is found, stop searching
+        return { grid, parents };
+      }
+
+      // Validate and add next coordinates to the queue (All 4 directions i.e up, down, left, right)
+      addToQueueIfAllowed(value.row, value.col, value.row - 1, value.col);
+      addToQueueIfAllowed(value.row, value.col, value.row, value.col - 1);
+      addToQueueIfAllowed(value.row, value.col, value.row + 1, value.col);
+      addToQueueIfAllowed(value.row, value.col, value.row, value.col + 1);
+
+      // push the processed coordinate to queue for marking
+      loopQueue.push({ row: value.row, col: value.col });
+    }
+
+    // mark all the cells which are covered
+    for (const value of loopQueue) {
+      if (
+        !visited[value.row][value.col] &&
+        grid[value.row][value.col] !== CellType.wall
+      ) {
+        visited[value.row][value.col] = true;
+        parents[value.row][value.col] = { row: value.row, col: value.col };
+        queue.push(value);
+      }
+
+      if (grid[value.row][value.col] === CellType.clear) {
+        await updateCells(grid, value, CellType.visited);
+      }
+    }
+  }
+
+  return { grid, parents: null };
+}
+
+
+--- dfs.ts ---
+
+import { SearchAlgoProps, Cell, CellType } from '@pathFinder/models';
+import { generateGrid } from '@pathFinder/helpers/grid.helper';
+
+// The Depth First Search Algorithm
+export async function depthFirstSearch({
+  grid: stateGrid,
+  entry,
+  exit,
+  updateCells,
+}: SearchAlgoProps) {
+  const grid = stateGrid.map((row) => row.slice());
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const visited = generateGrid(rows, cols, false); // initalize visited arrays
+  const parents = generateGrid<Cell>(rows, cols, null); // initalize parents arrays
+
+  async function explorePath(
+    row: number,
+    col: number,
+    parentRow = -1,
+    parentCol = -1
+  ): Promise<boolean> {
+    if (row < 0 || col < 0 || row >= rows || col >= cols) {
+      return false;
+    }
+
+    if (visited[row][col] || grid[row][col] === CellType.wall) {
+      return false;
+    }
+
+    visited[row][col] = true;
+    parents[row][col] = { row: parentRow, col: parentCol };
+
+    if (row === exit.row && col === exit.col) {
+      return true;
+    }
+
+    if (parentCol !== -1 && parentRow !== -1) {
+      await updateCells(grid, { row, col }, CellType.visited);
+    }
+
+    return (
+      (await explorePath(row + 1, col, row, col)) ||
+      (await explorePath(row - 1, col, row, col)) ||
+      (await explorePath(row, col + 1, row, col)) ||
+      (await explorePath(row, col - 1, row, col))
+    );
+  }
+
+  const hasPath = await explorePath(entry.row, entry.col);
+  return hasPath ? { grid, parents } : { grid, parents: null };
+}
+
+
+--- greedy.ts ---
+
+import { generateGrid } from '@pathFinder/helpers/grid.helper';
+import { SearchAlgoProps, Cell, CellType } from '@pathFinder/models';
+
+interface CostCell extends Cell {
+  h: number;
+}
+
+function getCostGrid(rows: number, cols: number): CostCell[][] {
+  return Array.from({ length: rows }, (_, row) =>
+    Array.from({ length: cols }, (_, col) => ({ row, col, h: 0 }))
+  );
+}
+
+function getManhattanDistance(cell: Cell, exit: Cell) {
+  return Math.abs(cell.row - exit.row) + Math.abs(cell.col - exit.col);
+}
+
+function getMinimumCostCell(costCells: CostCell[]) {
+  let idx = 0;
+  let minCostCell = costCells[idx];
+  for (let i = 1; i < costCells.length; i++) {
+    if (costCells[i].h < minCostCell.h) {
+      minCostCell = costCells[i];
+      idx = i;
+    }
+  }
+
+  return { minCostCell, idx };
+}
+
+function exploreNeighbors(
+  grid: CellType[][],
+  costGrid: CostCell[][],
+  open: CostCell[],
+  closed: Set<CostCell>,
+  parents: Cell[][],
+  current: CostCell,
+  exit: Cell
+) {
+  const rows = costGrid.length;
+  const cols = costGrid[0].length;
+  const neighbors = [
+    { row: current.row - 1, col: current.col },
+    { row: current.row, col: current.col + 1 },
+    { row: current.row + 1, col: current.col },
+    { row: current.row, col: current.col - 1 },
+  ];
+
+  for (const neighbor of neighbors) {
+    const { row, col } = neighbor;
+    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+      continue;
+    }
+
+    const cellType = grid[row][col];
+    const costCell = costGrid[row][col];
+    if (
+      cellType === CellType.wall ||
+      closed.has(costCell) ||
+      open.includes(costCell)
+    ) {
+      continue;
+    }
+
+    costCell.h = getManhattanDistance(neighbor, exit);
+    parents[row][col] = { row: current.row, col: current.col };
+    open.push(costCell);
+  }
+}
+
+// Greedy best first search algorithm
+export async function greedy({
+  grid: stateGrid,
+  entry,
+  exit,
+  updateCells,
+}: SearchAlgoProps) {
+  const grid = stateGrid.map((row) => row.slice());
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const costGrid = getCostGrid(rows, cols);
+  const open: CostCell[] = [];
+  const closed = new Set([costGrid[entry.row][entry.col]]);
+  const parents = generateGrid<Cell>(rows, cols, null);
+
+  exploreNeighbors(
+    grid,
+    costGrid,
+    open,
+    closed,
+    parents,
+    costGrid[entry.row][entry.col],
+    exit
+  );
+
+  while (open.length > 0) {
+    const { minCostCell, idx } = getMinimumCostCell(open);
+    if (minCostCell.row === exit.row && minCostCell.col === exit.col) {
+      return { grid, parents };
+    }
+
+    open.splice(idx, 1);
+    closed.add(minCostCell);
+    await updateCells(grid, minCostCell, CellType.visited);
+    exploreNeighbors(grid, costGrid, open, closed, parents, minCostCell, exit);
+  }
+
+  return { grid, parents: null };
+}
+
+
+--- path-tracer.ts ---
+
+import { PathAlgoProps } from '@pathFinder/models';
+
+export async function tracePath({
+  parents,
+  entry,
+  exit,
+  updateCell,
+}: PathAlgoProps) {
+  let row = exit.row;
+  let col = exit.col;
+  [row, col] = [parents[row][col].row, parents[row][col].col];
+
+  let pathLength = 0;
+  // if entry and exit are next to each other
+  if (entry.row === row && entry.col === col) {
+    return pathLength;
+  }
+
+  // Start marking the path with a small delay
+  do {
+    await updateCell({ row, col });
+    [row, col] = [parents[row][col].row, parents[row][col].col]; // set parents for next iteration
+    pathLength += 1;
+  } while (entry.row !== row || entry.col !== col); // check if entry is reached
+
+  return pathLength;
+}

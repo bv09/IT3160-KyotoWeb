@@ -1,0 +1,1230 @@
+# Openptmap/Installation - OpenStreetMap Wiki
+This page describes how to install the software you need for creating a map like [openptmap.org](http://openptmap.de/) (see also [openptmap Wiki page](https://wiki.openstreetmap.org/wiki/Openptmap "Openptmap")).
+
+Prerequisites
+-------------
+
+### Hardware
+
+A weak CPU or a virtual Internet server, will suffice if you limit the geographical region (e.g. France, Germany, Australia). For rendering a larger area, at least 4 or 8 GB RAM are recommended.
+
+### Operating System
+
+We assume that you use Ubuntu >=16.04 as operating system. All of the following steps have been tested with version 16.04.
+
+Prepare your System
+-------------------
+
+This chapter describes the steps which are to be done once. After having run through this work, you will only need to update the OSM data for your map from time to time, or you choose to implement an automatic update procedure which will be explained in the next chapter.
+
+### Create a User
+
+For all openptmap purposes you can use your usual user account if you like. However, it is recommended to create a separate user for that. In this example, we decide to create a user account with the name _pt_. Please log in with a user with administrator rights and enter the following commands:
+
+```
+sudo adduser pt
+sudo usermod -aG sudo pt
+
+```
+
+
+You will have noticed that we gave _sudo_ rights to user _pt_. These rights should be removed _after_ the whole installation process has been completed: sudo deluser pt sudo Now logoff, then log in with the new user name _pt_.
+
+### Software Packages
+
+You must install all packages necessary to run your own web server. Additionally, you will need some other packages. Ensure the installation of all necessary packages by performing these commands:
+
+```
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install nano unzip gcc zlib1g-dev
+sudo apt-get install postgresql-9.5-postgis-2.2 postgresql-contrib-9.5
+sudo apt-get install osm2pgsql
+sudo apt-get install python-mapnik mapnik-utils
+sudo apt-get install apache2 php php-pgsql libapache2-mod-php libjs-openlayers
+
+```
+
+
+At this point, it does not hurt to reboot the system to ensure all services have been started in proper order.
+
+### PostgreSQL Database
+
+The GIS database must be intitialized. Please follow these steps:
+
+```
+sudo -u postgres -i -H
+createuser -SdR ptuser
+createdb -E UTF8 -O ptuser ptgis
+createlang plpgsql ptgis
+psql -d ptgis -f /usr/share/postgresql/9.5/contrib/postgis-2.2/postgis.sql
+psql -d ptgis -f /usr/share/postgresql/9.5/contrib/postgis-2.2/spatial_ref_sys.sql
+psql ptgis -c "ALTER TABLE geography_columns OWNER TO ptuser"
+psql ptgis -c "ALTER TABLE geometry_columns OWNER TO ptuser"
+psql ptgis -c "ALTER TABLE spatial_ref_sys OWNER TO ptuser"
+exit
+
+```
+
+
+To enable easy database login by user _ptuser_ we need to edit one of the database configuration files. In case you are running Ubuntu with a graphical interface, you could use a more comfortable editor, e.g. _gedit_ instead of _nano_.
+
+```
+sudo nano /etc/postgresql/9.5/main/pg_hba.conf
+
+```
+
+
+Near to the bottom of the file you will find these lines:
+
+```
+local   all         all                               peer
+host    all         all         127.0.0.1/32          md5
+host    all         all         ::1/128               md5
+
+```
+
+
+In these lines change the word "peer" and the words "md5" each to "trust" and close the editor (for _nano_: Ctrl-O, Enter, Ctrl-X). Now reload the database configuration:
+
+```
+sudo service postgresql reload
+
+```
+
+
+For a short test, log in to the database by using the previously created database user _ptuser_:
+
+```
+psql ptgis ptuser
+
+```
+
+
+Type \\d to see a list with the two tables which we have created some steps above (geography\_columns, geometry\_columns, and spatial\_ref\_sys). Then logout with \\q
+
+If you encounter any problems, you may find a solution here: [PostGIS](https://wiki.openstreetmap.org/wiki/PostGIS "PostGIS").
+
+### Choose a Project Directory
+
+Our example directory for downloading OSM data and generating the data base contents will be the subdirectory _pt_ of the user _pt_, "/home/pt/pt", which can be abbreviated as "~/pt" if being logged in with this user. Let's create this directory:
+
+```
+mkdir /home/pt/pt
+
+```
+
+
+If you want to use a different directory, please create it and grant all access rights to the user _pt_. You also will have to replace all _cd /home/pt/pt_ commands in the following examples with _cd_ and the full path to your alternative directory.
+
+### Tools osmconvert, osmfilter and osmupdate
+
+These tools are mainly used to accelerate the PostgreSQL import process. If we filter out all information we want to use and drop everything else, osm2pgsql will run faster. On top of this, database queries will be faster too, so the rendering process will be accelerated as well. You can install these programs from Ubuntu repository. They are supplied by package osmctools. However, it is recommended to download and compile the source code because the binary may be out of date. To do this – downloading and compiling – from the command line, enter these commands:
+
+```
+cd /home/pt/pt
+wget -O - http://m.m.i24.cc/osmconvert.c |cc -x c - -lz -O3 -o osmconvert
+wget -O - http://m.m.i24.cc/osmfilter.c |cc -x c - -O3 -o osmfilter
+wget -O - http://m.m.i24.cc/osmupdate.c |cc -x c - -o osmupdate
+
+```
+
+
+For further details on both tools refer to [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert "Osmconvert"), [osmfilter](https://wiki.openstreetmap.org/wiki/Osmfilter "Osmfilter"), and [osmupdate](https://wiki.openstreetmap.org/wiki/Osmupdate "Osmupdate").
+
+### Get Coastlines
+
+Mapnik needs external shape-file data for coastlines at lower zoom levels; let's get them now:
+
+```
+cd /home/pt/pt
+wget https://raw.githubusercontent.com/openstreetmap/mapnik-stylesheets/master/get-coastlines.sh
+chmod +x get-coastlines.sh
+./get-coastlines.sh
+rm *.tar.bz2 *.tgz *.zip
+
+```
+
+
+Since more than 500 MB will be downloaded and decompressed in this step, it may take a while.
+
+### Get Icons
+
+Mapnik renderer will need certain icons to represent the objects we want to display on the map. You can create these icons by yourself or download sets of icons from various Internet sources. In this example we take the icon set from openptmap.org:
+
+```
+cd /home/pt/pt
+wget -r -l 1 -nd -A \*.png -P symbols http://openptmap.org/f/symbols/
+
+```
+
+
+### Mapnik Renderer Initialization
+
+For the rendering tool Mapnik, some initializations are to be done. Afterwards, a Mapnik style file needs to be created. You can create the file _mapnik\_pt.xml_ on your own or use one of the examples from the Internet. You also may download the public-transport style file from here: [openptmap.org/f/mapnik\_pt.xml](http://openptmap.org/f/mapnik_pt.xml)
+
+```
+cd /home/pt/pt
+wget -r -l 1 -nd -R index.html -P inc https://svn.openstreetmap.org/applications/rendering/mapnik/inc/
+wget https://svn.openstreetmap.org/applications/rendering/mapnik/generate_xml.py
+chmod +x generate_xml.py
+./generate_xml.py --host localhost --user ptuser --dbname ptgis --symbols ./symbols/ --world_boundaries ./world_boundaries/ --port '' --password ''
+wget http://openptmap.org/f/mapnik_pt.xml
+
+```
+
+
+Create the Map
+--------------
+
+This chapter will show you how to create or update the tiles for your map. _Tiles_ are small bitmaps which will be assembled to a whole map by the map browser. We assume that all tasks of the previous chapter have been completed successfully.
+
+The process of map creation involves two steps – filling the database and rendering the map tiles.
+
+### Fill the Database
+
+All information we need to create the map tiles must be written into our database. To do this, we need to develop a script which performs several tasks, step by step. We will do this step by step, entering every single command at the command line terminal. That makes it much easier to find errors.
+
+#### Get the Planet File
+
+It is not recommended to use the file of the entire planet. Please choose the file of an area you are interested in, in this example a part of Germany. The first task will be to download this file and to store it using [.o5m](https://wiki.openstreetmap.org/wiki/.o5m ".o5m") file format.
+
+```
+cd /home/pt/pt
+wget http://download.geofabrik.de/europe/germany/bayern/mittelfranken-latest.osm.pbf -O - |./osmconvert - -o=a.o5m
+
+```
+
+
+#### Filter the Planet File
+
+We need to do a hierarchical filtering because there will be nodes in ways, ways in relations and relations in other relations. For performance reasons a pre-filtered file will be used for interrelational filtering. In this example we decided to filter public-transport specific information because we want to create a public transport map. The filtering criteria need to be specified in a file. This can be done via commandline like this:
+
+```
+cd /home/pt/pt
+cat <<eof >toolchain_pt.filter
+--keep=
+route=ferry =train =light_rail =subway =tram =monorail =trolleybus =bus =aerialway =funicular
+line=ferry =rail =train =light_rail =subway =tram =trolleybus =bus =funicular
+public_transport=stop_area =platform
+railway=station =halt =tram_stop
+highway=bus_stop
+amenity=bus_station
+aerialway=station
+
+--drop=
+railway=platform
+
+--keep-tags=all
+railway=station =halt =tram_stop
+highway=bus_stop
+amenity=bus_station
+disused=yes
+public_transport=stop_area =platform
+aerialway=station =yes
+ferry=yes train=yes subway=yes
+monorail=yes tram=yes trolleybus=yes bus=yes
+ref= uic_ref= ref_name= ref:ibnr= ref:IBNR= name= website= wheelchair=
+
+--keep-way-relation-tags=all
+route= line= type= state=
+eof
+
+```
+
+
+Then the OSM raw data can be filtered:
+
+```
+./osmfilter a.o5m --parameter-file=toolchain_pt.filter -o=gis.o5m
+
+```
+
+
+Some seconds or minutes later – depending on the size of the chosen area – we will get the file _gis.o5m_, containing only that information we need.
+
+Note: We are using .o5m file format, because this will accelerate the filter process significantly. For further information see [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert "Osmconvert") and [.o5m](https://wiki.openstreetmap.org/wiki/.o5m ".o5m").
+
+#### Transfer the Data to Postgres Database
+
+Now we can transfer the OSM data from the file _gis.o5m_ into the Postgres database. The program [osm2pgsql](https://wiki.openstreetmap.org/wiki/Osm2pgsql "Osm2pgsql") will do this job. To fit the needs of our specialised map, we need to create our own osm2pgsql style file first. This can be done with an editor or by executing these commands:
+
+```
+cd /home/pt/pt
+cat <<eof >osm2pgsql_pt.style
+node,way aerialway text linear
+node,way amenity text polygon
+node,way area text polygon
+node,way bus text linear
+node,way disused text linear
+node,way ferry text linear
+node,way highway text linear
+node,way monorail text linear
+node,way name text linear
+node,way public_transport text polygon
+node,way railway text linear
+node,way ref text linear
+node,way ref_name text linear
+node,way ref:ibnr text linear
+node,way ref:IBNR text linear
+node,way route text linear
+node,way train text linear
+node,way tram text linear
+node,way trolleybus text linear
+node,way uic_ref text linear
+node,way z_order int4 linear
+node,way website text linear
+node,way wheelchair text linear
+way way_area real linear
+node,way line text linear
+node,way state text linear
+eof
+
+```
+
+
+Now you can start the data import:
+
+```
+osm2pgsql -s -C 1500 -d ptgis -U ptuser -S osm2pgsql_pt.style gis.o5m
+
+```
+
+
+Because the .o5m file had been filtered in the previous step, this transfer should take only a few minutes. If you have more main memory to spend, you can increase the number of available MB increasing the parameter \-C 1500.
+
+If you encounter any problems, you may find a solution here: [osm2pgsql](https://wiki.openstreetmap.org/wiki/Osm2pgsql "Osm2pgsql").
+
+### Rendering Test
+
+At first, we should test if the renderer works as expected. Thereby, the _nik4_ program will help us. Let's pick an area for which we have already imported GIS data – in this example: Nürnberg, Germany – generate a test image and examine it with the viewer (here _Eye of Gnome_).
+
+```
+cd /home/pt/pt
+wget https://raw.githubusercontent.com/Zverik/Nik4/master/nik4.py
+chmod +x nik4.py
+./nik4.py -c 11 49.5 -z 12 -d 800 400 -f png256 mapnik_pt.xml image.png
+eog image.png &
+
+```
+
+
+### Render the Tiles
+
+If the test-run has been successful, the next step should be generating map tiles. For this purpose, we use the script _generate\_tiles.py_. First, the bounding box must be adjusted to our map area. Open the script with _nano_ or _gedit_ and delete all the lines below the line _\# Start with an overview_.
+
+```
+cd /home/pt/pt
+wget https://svn.openstreetmap.org/applications/rendering/mapnik/generate_tiles.py
+chmod +x generate_tiles.py
+nano generate_tiles.py
+
+```
+
+
+Replace the deleted lines with these (do not change the 4 spaces indent):
+
+```
+    x1= float(os.environ['X1'])
+    y1= float(os.environ['Y1'])
+    x2= float(os.environ['X2'])
+    y2= float(os.environ['Y2'])
+    minZoom= int(os.environ['Z1'])
+    maxZoom= int(os.environ['Z2'])
+    bbox= (x1,y1,x2,y2)
+    render_tiles(bbox,mapfile,tile_dir,minZoom,maxZoom,"pt")
+
+```
+
+
+The next step would be to render map tiles and store them into our webserver's public directory /var/www/html/tiles. To do so it is necessary to have sufficient access rights to that directory. Let's care about these rights:
+
+```
+sudo groupadd www
+sudo adduser pt www
+sudo chgrp -R www /var/www/html
+sudo chmod -R g+w /var/www/html
+
+```
+
+
+To get these changes work, you will need to log in again. If you had chosen another user account, not _pt_, than please change the last command accordingly. We need to create a directory where all the rendered map tiles will be stored in:
+
+```
+mkdir /var/www/html/tiles
+
+```
+
+
+Before generating a huge bulk of tiles, it's best to try the rendering with a single tile and see if it works. The following commands will create a map overlay tile for the city of Nürnberg (Germany) at zoom level 10.
+
+```
+cd /home/pt/pt
+X1=11 Y1=49.5 X2=11 Y2=49.5 Z1=10 Z2=10 MAPNIK_MAP_FILE="/home/pt/pt/mapnik_pt.xml" MAPNIK_TILE_DIR="/var/www/html/tiles/" ./generate_tiles.py
+
+```
+
+
+Now open the created tile with an image viewer, e.g. _eog_:
+
+```
+eog /var/www/html/tiles/10/543/349.png &
+
+```
+
+
+If the rendering of this test tile has been successful, we can risk to start the rendering of a larger map, the whole city of Nürnberg, for example. In dependence of the hardware, it may take 15 minutes up to a few hours to render all the tiles. In case you want to abort the rendering, you will have to use a system monitor program like _top_ or the command _kill_ to kill the rendering process because Ctrl-C does not work here.
+
+```
+cd /home/pt/pt
+F=1 X1=10.9 Y1=49.3 X2=11.3 Y2=49.6 Z1=4 Z2=17 MAPNIK_MAP_FILE="/home/pt/pt/mapnik_pt.xml" MAPNIK_TILE_DIR="/var/www/html/tiles/" ./generate_tiles.py
+
+```
+
+
+### Build the Website
+
+The web server _Apache_ will expect our web content at "/var/www/html/". In one of the previous steps we have granted us the necessary access rights to this directory. To display, move and zoom the map on the screen a specialized framework will be needed: _openlayers_. For this, some additional files must be copied resp. downloaded:
+
+```
+cd /var/www/html
+cp /usr/share/javascript/openlayers/OpenLayers.js .
+cp /usr/share/openlayers/theme/default/style.css .
+mkdir img
+cp /usr/share/openlayers/img/* img/
+wget https://www.openstreetmap.org/openlayers/OpenStreetMap.js
+
+```
+
+
+Now open the existing example index file and replace its contents by the following text. You can use _gedit_ or _nano_ editor for this task: nano /var/www/html/index.html
+
+```
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="de">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+  <title>Public Transport Lines - &Ouml;V-Linien - openptmap.org</title>
+  <link rel="shortcut icon" href="favicon_pt.png">
+  <link rel="stylesheet" href="style.css" type="text/css">
+  <style>  /* avoid empty tiles */ .olImageLoadError {display: none;} </style>
+  <script src="OpenLayers.js" type="text/javascript"></script>
+  <script src="OpenStreetMap.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    var zoom=4; var lon=11.08; var lat=49.45; var map;
+
+    OpenLayers.Protocol.HTTPex= new OpenLayers.Class(OpenLayers.Protocol.HTTP, {
+      read: function(options) {
+        OpenLayers.Protocol.prototype.read.apply(this,arguments);
+        options= OpenLayers.Util.applyDefaults(options,this.options);
+        options.params= OpenLayers.Util.applyDefaults(
+        options.params,this.options.params);
+        options.params.resolution= map.getResolution();
+        options.params.zoom= map.getZoom();
+        if(options.filter) {
+          options.params= this.filterToParams(
+            options.filter, options.params);
+          }
+        var readWithPOST= (options.readWithPOST!==undefined)?
+          options.readWithPOST: this.readWithPOST;
+        var resp= new OpenLayers.Protocol.Response({requestType: "read"});
+        if(readWithPOST) {
+          resp.priv= OpenLayers.Request.POST({
+            url: options.url,
+            callback: this.createCallback(this.handleRead,resp,options),
+            data: OpenLayers.Util.getParameterString(options.params),
+            headers: {"Content-Type": "application/x-www-form-urlencoded"}
+            });
+        } else {
+          resp.priv= OpenLayers.Request.GET({
+            url: options.url,
+            callback: this.createCallback(this.handleRead,resp,options),
+            params: options.params,
+            headers: options.headers
+            });
+          }
+        return resp;
+        },
+      CLASS_NAME: "OpenLayers.Protocol.HTTPex"
+      });
+
+    function init() {
+      var args= OpenLayers.Util.getParameters();
+
+      map= new OpenLayers.Map("map", {
+        controls:[
+          new OpenLayers.Control.Navigation(),
+          new OpenLayers.Control.PanZoomBar(),
+          new OpenLayers.Control.LayerSwitcher(),
+          new OpenLayers.Control.Permalink(),
+          new OpenLayers.Control.ScaleLine(),
+          new OpenLayers.Control.Permalink('permalink'),
+          new OpenLayers.Control.MousePosition(),                    
+          /*new OpenLayers.Control.Attribution()*/],
+        maxExtent: new OpenLayers.Bounds(-20037508.34,-20037508.34,20037508.34,20037508.34),
+        maxResolution: 156543.0399,
+        numZoomLevels: 17,
+        units: 'm',
+        projection: new OpenLayers.Projection("EPSG:900913"),
+        displayProjection: new OpenLayers.Projection("EPSG:4326")
+        } );
+
+    map.addLayer(new OpenLayers.Layer.OSM.Mapnik("Map",
+      { maxZoomLevel: 17, numZoomLevels: 18 }));
+ 
+    map.addLayer(new OpenLayers.Layer.OSM.Mapnik("Map, pale",
+      { maxZoomLevel: 17, numZoomLevels: 18, opacity: 0.5 }));
+ 
+    map.addLayer(new OpenLayers.Layer.OSM.CycleMap("Cycle map",
+      { maxZoomLevel: 17, numZoomLevels: 18 }));
+
+    map.addLayer(new OpenLayers.Layer.OSM.CycleMap("Cycle map, pale",
+      { maxZoomLevel: 17, numZoomLevels: 18, opacity: 0.5 }));
+
+    map.addLayer(new OpenLayers.Layer.OSM("No Background","blank.gif",
+      { maxZoomLevel: 17, numZoomLevels: 18 }));
+
+    map.addLayer(new OpenLayers.Layer.OSM("Public transport lines","tiles/${z}/${x}/${y}.png",
+      { maxZoomLevel: 17, numZoomLevels: 18, alpha: true, isBaseLayer: false }));
+
+    if(!map.getCenter()){
+      var lonLat= new OpenLayers.LonLat(lon, lat).transform(new OpenLayers.Projection("EPSG:4326"),
+        map.getProjectionObject());
+      map.setCenter(lonLat,zoom);
+      }
+    }
+  </script>
+</head>
+<body onload="init();">
+<div style="width:100%; height:100%;" id="map"></div><br></body>
+</html>
+
+```
+
+
+Further information about [OpenLayers](https://wiki.openstreetmap.org/wiki/OpenLayers "OpenLayers") can be found [here](https://wiki.openstreetmap.org/wiki/OpenLayers_Local_Tiles_Example).
+
+### Test your new Map
+
+Open a web browser and try to access your new website. If your browser is installed on the same computer as the Apache server, type _localhost_ or _127.0.0.1_ as URL. If you did not render the complete map yet but have rendered that single tile from the rendering test example above, you will find it here: 127.0.0.1/?zoom=10&lat=49.5&lon=11&layers=B0000T All tiles which have not been rendered are displayed as pink squares.
+
+Please be aware that this map is an _overlay map_. That means in this case, the background tiles are fetched directly from openstreetmap.org map server, and just the foreground tiles – the public transport layer – comes from your server.
+
+Create and update the Map Automatically
+---------------------------------------
+
+Did all previous steps work without any errors? Then it's time to pack them into a single script and to care for map updates on a regular basis. For the updates we will us a so-called diff-based rendering strategy.
+
+With diff-based rendering only that tiles will be rendered whose OSM data have been changed. With the right call, the program _osm2pgsql_ will supply us with a list of these tiles. This is usually not very helpful for a thematic overlay map because 90% of the changed data will not affect the overlay image, but there is a way to get exactly the information we need: update the PostgreSQL database with OSM-Change files which have been retrieved from intensively filtered data.
+
+### Getting Differential OSM Data
+
+To do the map updates there is no need to completely reimport all the OSM data. It will suffice to download and process just that data which have been changed. There are several sources of this kind of data – so-called OSC files (_OSM-Change files_, .osc) – in the Internet. For updating a local copy of OSM raw data, we will use the program [osmupdate](https://wiki.openstreetmap.org/wiki/Osmupdate "Osmupdate"). The same job could be done with the well-known multy-purpose program [Osmosis](https://wiki.openstreetmap.org/wiki/Osmosis "Osmosis") als well, of course.
+
+### Indirectly filtering OSM-Change File
+
+At first view we can save a lot of effort if we directly filtered the differential data. Unfortunately this does not work as expected. The reason is that OSM-Change file usually contain only that OSM objects which have been changed. If – as in this example – all bus lines shall be rendered and a single node of one of these bus lines had been moved, only this node would be in the OSM-Change file. This node does not have any bus-line information, thus it would be filtered out and the bus-line relevant information would be lost.
+
+To prevent this from happening the _filtered data_ from _after_ an update need to be compared against against the _filtered data_ from _before_ this update. On the base of this comparison a new OSM-Change file is created. This can be done by the [\--diff function](about:/wiki/Osmconvert#Retrieving_the_Differences_between_two_OSM_Files "Osmconvert") of [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert "Osmconvert"). The resulting OSM-Change file should not bee very large because it is retrieved from filtered data.
+
+### Getting a List of _all_ Dirty Tiles
+
+Map tiles which are not up-to-date are referred to as _dirty tiles_. During map data import the program [osm2pgsql](https://wiki.openstreetmap.org/wiki/Osm2pgsql "Osm2pgsql") generates a list of all dirty tiles. Unfortunately the program does not provide us with the names of _all_ affected tiles because this list is stripped of all redundant information. If there is, for example, the tile 3/0/1 (zoom, x, y) in the list, the also affected tiles 2/0/0 and 1/0/0 will be omitted. Furthermore, a list entry 3/0/1 means that all four tiles of the next zoom level have also been omitted although affected: 4/0/2, 4/0/3, 4/1/2, and 4/1/3.
+
+This is an effective way to reduce the dirty-tiles list length but we still need a list of _all_ effected tiles. For this reason, the dirty tiles list must be expanded accordingly. This can be done with a small C program which needs to be added to our toolchain:
+
+```
+cat <<eof |cc -x c - -O3 -o dtexpand
+// dtexpand 2017-03-10 18:00
+//
+// expands the dirty-tiles list as provided by osm2pgsql
+// example: dtexpand 4 17 <dirty_tiles >dirty_tiles_ex
+// (c) 2017 Markus Weber, Nuernberg, License LGPLv3
+#include <ctype.h>
+#include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(int argc,char** argv) {
+  int fieldedge[20];
+  uint8_t* field[20],*fieldend[20];
+  int zoom_min,zoom_max,zoom_sub;
+  int z,x,y,zz,xx,yy,xd,yd,q; uint64_t u;
+  uint8_t b; uint8_t* bp,*bpa,*bpe;
+  char line[40]; char* sp;
+  typedef struct {int zs,tx_min,tx_max,ty_min,ty_max;} sub_t;
+  sub_t* sub,*subp; int subn;
+
+  if(argc<3 || (argc-3)%5!=0) { fprintf(stderr,
+    "Usage: dtexpand ZOOM_MIN ZOOM_MAX <DT_IN >DT_OUT\n"
+    "Optional value sets each: ZOOM_SUB TX_MIN TX_MAX TY_MIN TY_MAX\n"
+    "         ZOOM_SUB: max zoom level for blindly adding subtiles\n"
+    "         TX...TY: concerning tile range at ZOOM_MAX level\n"
+      ); return 1; }
+  zoom_min= atoi(argv[1]); zoom_max= atoi(argv[2]);
+  subn= (argc-3)/5;
+  sub= (sub_t*)malloc(sizeof(sub_t)*(subn+1));
+  argv+= 2; subp= sub;
+  for(z= 0;z<subn;z++) {  // for each subtile value set
+    subp->zs= atoi(*++argv);
+    subp->tx_min= atoi(*++argv); subp->tx_max= atoi(*++argv);
+    subp->ty_min= atoi(*++argv); subp->ty_max= atoi(*++argv);
+    if(zoom_min<0 || zoom_min>19 || zoom_max<zoom_min || zoom_max>19 ||
+        subp->zs<=zoom_max || subp->zs>19) { fprintf(stderr,
+        "Unsupported zoom value(s).\n"); return 2; }
+    subp++; }  // for each subtile value set
+  subp->zs= 0;
+  for(z= zoom_max-1;z>=zoom_min;z--) {  // for each zoom level
+    fieldedge[z]= u= UINT32_C(1)<<z; u= u*u+7>>3;
+    if((field[z]= (uint8_t*) malloc(u))==NULL) { fprintf(stderr,
+      "Not enough main memory.\n"); return 3; }
+    memset(field[z],0,u);
+    fieldend[z]= field[z]+u;
+    }  // for each zoom level
+  while(fgets(line,sizeof(line),stdin)!=NULL) {  // for each input line
+    sp= line;
+    z= 0; while(isdigit(*sp)) z= z*10+*sp++-'0'; if(*sp=='/') sp++;
+    x= 0; while(isdigit(*sp)) x= x*10+*sp++-'0'; if(*sp=='/') sp++;
+    y= 0; while(isdigit(*sp)) y= y*10+*sp++-'0';
+    if(z<zoom_min || z>zoom_max)
+  continue;
+    zz= z-1; xx= x>>1; yy= y>>1;
+    while(zz>=zoom_min) {  // for all lower zoom levels
+      u= xx; u*= fieldedge[zz]; u+= yy; bp= &field[zz][u/8];
+      if(bp<fieldend[zz]) *bp|= 1<<(u&7);  // (preventing overflow)
+      zz--; xx>>= 1; yy>>= 1;
+      }  // for all lower zoom levels
+    q= 1;
+    do {  // for this and all higher zoom levels
+      for(xd= 0;xd<q;xd++) for(yd= 0;yd<q;yd++) {  // all these tiles
+        xx= x+xd; yy= y+yd;
+        if(z<zoom_max) {
+          u= xx; u*= fieldedge[z]; u+= yy; bp= &field[z][u/8];
+          if(bp<fieldend[z]) *bp|= 1<<(u&7);  // (preventing overflow)
+          }
+        else {  // at zoom_max level
+          printf("%i/%i/%i\n",z,xx,yy);
+          // determine relevant subtile zoom level 
+          zoom_sub= zoom_max;
+          subp= sub;
+          while(subp->zs!=0) {  // for each subtile value set
+            if(subp->zs>zoom_sub &&
+                xx>=subp->tx_min && xx<=subp->tx_max &&
+                yy>=subp->ty_min && yy<=subp->ty_max) zoom_sub= subp->zs;
+            subp++; }  // for each subtile value set
+          // write subtiles
+          int xxd,yyd,qq;
+          zz= z; qq= 1;
+          while(zz<zoom_sub) {  // for each subtile level
+            zz++; xx<<= 1; yy<<= 1; qq<<= 1;
+            for(xxd= 0;xxd<qq;xxd++) for(yyd= 0;yyd<qq;yyd++)
+              printf("%i/%i/%i\n",zz,xx+xxd,yy+yyd);
+            }  // for each subtile level
+          }  // at zoom_max level
+        }  // all these tiles
+      z++; x<<= 1; y<<= 1; q<<= 1;
+      } while(z<=zoom_max);  // for this and all higher zoom levels
+    }  // for each input line
+  for(z= zoom_max-1;z>=zoom_min;z--) {  // for each zoom level
+    bp= bpa= field[z]; bpe= fieldend[z];
+    do {  // for each byte in bitfield
+      b= *bp;
+      if(b) {  // at least one bit in byte is set
+        int be= fieldedge[z];
+        for(int bi=0;bi<8;bi++) {  // for each bit in byte
+          if(b&1) {  // bit is set
+            u= (bp-bpa)*8+bi; x= u/be; y= u&be-1;
+            printf("%i/%i/%i\n",z,x,y);
+            }  // bit is set
+          b>>= 1;
+          }  // for each bit in byte
+        }  // at least one bit in byte is set
+      } while(++bp<bpe);  // for each byte in bitfield
+    free(field[z]);
+    }  // for each zoom level
+  free(sub); return 0;
+  }  // main()
+eof
+
+```
+
+
+Besides its main function this program can also be used to add subtile names for certain regions to the dirty-tiles list. If you want to create a global map up to zoom level 17, for example, and having a small region rendered up to zoom level 18, you may later add this subtile zoom level as well as the region's level-17 tile range to the command line:
+
+```
+dtexpand 4 17 18 69000 70000 44000 45000
+
+```
+
+
+If there are two or more of such regions, just enter all of their 5-value sets. For example:
+
+```
+dtexpand 4 17 19 80000 81000 48000 49000 18 69000 70000 44000 45000
+
+```
+
+
+### Feeding Mapnik with a Tiles List
+
+Mapnik must be enabled to read and process dirty-tiles lists. The following python script will exactly do this. Enter /home/pt/pt directory and create a file with the name mapnik\_pt.py and the following contents:
+
+```
+#!/usr/bin/python
+# mapnik_pt 2017-02-19 18:30
+# reads dirty-tiles file and renders each tile of this list;
+# afterwards, deletes the rendered dirty-tiles file;
+# call: DTF="dirty_tiles" mapnik_pt.py
+# parallel call: DTF="dirty_tiles" PID=123 mapnik_pt.py
+# (c) Markus Weber, Nuernberg, License: AGPLv3
+from math import pi,cos,sin,log,exp,atan
+from subprocess import call
+import sys, os
+from Queue import Queue
+import mapnik
+import threading
+import shutil
+
+DEG_TO_RAD = pi/180
+RAD_TO_DEG = 180/pi
+
+def minmax (a,b,c):
+    a = max(a,b)
+    a = min(a,c)
+    return a
+
+class GoogleProjection:
+    def __init__(self,levels=18):
+        self.Bc = []
+        self.Cc = []
+        self.zc = []
+        self.Ac = []
+        c = 256
+        for d in range(0,levels):
+            e = c/2;
+            self.Bc.append(c/360.0)
+            self.Cc.append(c/(2 * pi))
+            self.zc.append((e,e))
+            self.Ac.append(c)
+            c *= 2
+
+    def fromLLtoPixel(self,ll,zoom):
+         d = self.zc[zoom]
+         e = round(d[0] + ll[0] * self.Bc[zoom])
+         f = minmax(sin(DEG_TO_RAD * ll[1]),-0.9999,0.9999)
+         g = round(d[1] + 0.5*log((1+f)/(1-f))*-self.Cc[zoom])
+         return (e,g)
+
+    def fromPixelToLL(self,px,zoom):
+         e = self.zc[zoom]
+         f = (px[0] - e[0])/self.Bc[zoom]
+         g = (px[1] - e[1])/-self.Cc[zoom]
+         h = RAD_TO_DEG * ( 2 * atan(exp(g)) - 0.5 * pi)
+         return (f,h)
+
+if __name__ == "__main__":
+
+  # read environment variables
+  dt_file_name = os.environ['DTF']
+  try:
+    temp_file = "/dev/shm/tile" + os.environ['PID']
+  except:
+    temp_file = "/dev/shm/tile"
+
+  # do some global initialization
+  print "Rendering " + dt_file_name + ": started."
+  mapfile = "mapnik_pt.xml"
+  tile_dir = "/var/www/html/tiles/"
+  max_zoom = 18
+  tile_count = 0
+  empty_tile_count = 0
+
+  # create tile directory and all possible zoom directories
+  if not os.path.isdir(tile_dir):
+    os.mkdir(tile_dir)
+  for z in range(0, max_zoom):
+    d = tile_dir + "%s" % z + "/"
+    if not os.path.isdir(d):
+      os.mkdir(d)
+
+  # open the dirty-tiles file
+  try:
+    dt_file = file(dt_file_name, "r")
+  except:
+    dt_file = None
+  if (dt_file != None):
+
+    # do some Mapnik initialization
+    mm = mapnik.Map(256, 256)
+    mapnik.load_map(mm, mapfile, True)
+    # Obtain <Map> projection
+    prj = mapnik.Projection(mm.srs)
+    # Projects between tile pixel co-ordinates and LatLong (EPSG:4326)
+    tileproj = GoogleProjection(max_zoom + 1)
+
+    # process the dirty-tiles file
+    while True:
+
+      # read a line of the dirty-tiles file
+      line = dt_file.readline()
+      if (line == ""):
+        break
+      line_part = line.strip().split('/')
+
+      # create x coordinate's directory - if necessary
+      d = tile_dir + line_part[0] + "/" + line_part[1] + "/"
+      if not os.path.isdir(d):
+        os.mkdir(d)
+
+      # get parameters of the line
+      z = int(line_part[0])
+      x = int(line_part[1])
+      y = int(line_part[2])
+      tile_name= tile_dir + line[:-1] + ".png"
+
+      # render this tile -- start
+
+      # Calculate pixel positions of bottom-left & top-right
+      p0 = (x * 256, (y + 1) * 256)
+      p1 = ((x + 1) * 256, y * 256)
+
+      # Convert to LatLong (EPSG:4326)
+      l0 = tileproj.fromPixelToLL(p0, z);
+      l1 = tileproj.fromPixelToLL(p1, z);
+
+      # Convert to map projection (e.g. mercator co-ords EPSG:900913)
+      c0 = prj.forward(mapnik.Coord(l0[0], l0[1]))
+      c1 = prj.forward(mapnik.Coord(l1[0], l1[1]))
+
+      # Bounding box for the tile
+      if hasattr(mapnik,'mapnik_version') and mapnik.mapnik_version() >= 800:
+        bbox = mapnik.Box2d(c0.x,c0.y, c1.x,c1.y)
+      else:
+      	bbox = mapnik.Envelope(c0.x,c0.y, c1.x,c1.y)
+      render_size = 256
+      mm.resize(render_size, render_size)
+      mm.zoom_to_box(bbox)
+      mm.buffer_size = 256  # (buffer size was 128)
+
+      # render image with default Agg renderer
+      im = mapnik.Image(render_size, render_size)
+      mapnik.render(mm, im)
+      im.save(temp_file, 'png256')
+      tile_count = tile_count + 1
+
+      # render this tile -- end
+
+      # copy this tile to tile tree
+      l= os.stat(temp_file)
+[6]
+      if l>116:
+        shutil.copyfile(temp_file,tile_name)
+      else:
+        try:
+          os.unlink(tile_name)
+        except:
+          l= l  # (file did not exist)
+        empty_tile_count = empty_tile_count + 1
+
+    # close and delete the dirty-tiles file
+    dt_file.close()
+    try:
+      os.unlink(dt_file_name)
+    except:
+      l= l  # (file did not exist)
+
+  # print some statistics
+  print "Rendering " + dt_file_name + ":", tile_count, "tiles (" + "%s" % empty_tile_count + " empty)."
+
+```
+
+
+This Python file must be made executable:
+
+```
+chmod +x mapnik_pt.py
+
+```
+
+
+### Omitting Empty Tiles
+
+Empty tiles on a transparent map layer are completely transparent graphics and not of any use for our map, they just waste disk space. Therefore it is better to refrain from saving them in the first place. This will be accomplished by a few additional lines in the Mapnik Python script (see above).
+
+OpenLayers must be advised what to do if an tile image is to be loaded which does not exist on the server. We already did the necessary changes to the file index.html (see above, look for .olImageLoadError {display: none;}).
+
+### Schematic Diagram
+
+Here is an overview of the programs and files we are using. This diagram is somewhat simplified; it has been created to show all main steps of the strategy in one picture.
+
+```
+                   hourly.osc
+                        |
+                        v
+                  +-----------+
+                  | osmupdate |
+      a.o5m ----> | -B=p.poly | ----> b.o5m
+        |         +-----------+         |
+        v               ^               v
++---------------+       |       +---------------+
+|   osmfilter   |     p.poly    |   osmfilter   |
+| --keep=route= |               | --keep=route= |
++---------------+               +---------------+
+        |                               |
+        v         +------------+        v
+      fa.o5m ---> | osmconvert | <--- fb.o5m
+                  |   --diff   |
+                  +------------+
+                        |
+                        v
+                     gis.osc
+                        |
+                        v
+                  +------------+
+                  | osm2pgsql  | ---> database
+                  | -e 5-12 -a |      update
+                  +------------+
+                        |
+                        v
+                   dirty_tiles
+                        |
+                        v
+                 +--------------+
+                 | mapnik_pt.py | ---> new tiles
+                 +--------------+
+
+```
+
+
+Involved Files
+
+*   hourly.osc: hourly OsmChange file, downloaded from [planet.openstreetmap.org](https://planet.openstreetmap.org/)
+*   p.poly: [border polygon](https://wiki.openstreetmap.org/wiki/Osmosis/Polygon_Filter_File_Format "Osmosis/Polygon Filter File Format") of our graphical region
+*   a.o5m: previous OSM data file (all data of our geographical region)
+*   b.o5m: updated OSM data file (all data of our geographical region)
+*   fa.o5m: previous filtered OSM data file (only thematic data, e.g. public transport)
+*   fb.o5m: filtered new OSM data file (only thematic data, e.g. public transport)
+*   gis.osc: the OsmChange file (so-called diff file) you would need to update fa.o5m to fb.o5m
+*   dirty\_tiles: a list of all tiles which are affected by the gis.osc and therefore have to be rerendered
+
+Used Programs
+
+*   [osmupdate](https://wiki.openstreetmap.org/wiki/Osmupdate "Osmupdate"): download .osc files and use them to update an .o5m file
+*   [osmfilter](https://wiki.openstreetmap.org/wiki/Osmfilter "Osmfilter"): filter OSM data and discard all the information we do not need
+*   [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert "Osmconvert"): compare the difference between two .o5m files and create an .osc diff file
+*   [osm2pgsql](https://wiki.openstreetmap.org/wiki/Osm2pgsql "Osm2pgsql"): update a postgreSQL geo database and calculate a dirty-tiles list
+*   mapnik\_pt.py: read the dirty-tiles file and (re)render all listed tiles
+
+Most of the task also can be done – maybe more reliable – with [Osmosis](https://wiki.openstreetmap.org/wiki/Osmosis "Osmosis"). If you already have installed Osmosis, feel free to use it. Osmosis offers a much wider variety of functions but will be slower in processing the data.
+
+### Toolchain Script
+
+The following toolchain script will link all the previously introduced steps. Create a file named toolchain\_pt.sh and put it into main directory /home/pt/pt:
+
+```
+#!/bin/bash
+# toolchain_pt.sh
+# (c) Markus Weber, 2017-02-23 02:50, License: AGPLv3
+#
+# This script cares about creating an overlay map.
+# It loads and updates the map data and renders the tiles.
+# The script will run endless in a loop.
+# Start it with "nohup ./toolchain_pt.sh &"
+# To terminate it, delete the file "toolchain_pt_running.txt".
+
+PLANETURL=https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf
+PLANETMINSIZE=10000000000  # minimum size of OSM data file in .o5m format
+BORDERS=
+# ALTERNATE MAP DATA SOURCE (will overwrite previous settings):
+PLANETURL=http://download.geofabrik.de/europe/germany/bayern/mittelfranken-latest.osm.pbf
+PLANETMINSIZE=40000000  # minimum size of OSM data file in .o5m format
+BORDERS="-B=mittelfranken.poly"
+#
+MAXPROCESS=2  # maximum number of concurrent processes for rendering
+MAXMERGE=5  # number of files to be merged in parallel by osmupdate
+OSM2PGSQLPARAM="-s -C 1500 -d ptgis -U ptuser -S osm2pgsql_pt.style"
+  # main parameters to be passed to osm2pgsql
+
+# enter working directory and do some initializations
+cd /home/pt/pt
+echo >>tc.log
+echo $(date)"  toolchain started." >>tc.log
+PROCN=1000  # rendering-process number (range 1000..1999)
+mkdir d_t 2>/dev/null
+
+# publish that this script is now running
+rm toolchain_pt_ended.txt 2>/dev/null
+echo -e "The toolchain script has been started at "$(date)"\n"\
+"and is currently running. To terminate it, delete this file and\n"\
+"wait until the file \"toolchain_pt_ended.txt\" has been created.\n"\
+"This may take some minutes." \
+>toolchain_pt_running.txt
+
+# clean up previous Mapnik processes
+killall "mapnik_pt.py" 2>/dev/null
+while [ $(ls d_t/at* 2>/dev/null |wc -l) -gt 0 ]; do
+    # there is at least one incompleted rendering process
+  AT=$(ls -1 d_t/at* 2>/dev/null|head -1)  # tile list
+  echo $(date)"  Cleaning up incomplete rendering: "$AT >>tc.log
+  DT=${AT:0:4}d${AT:5:99}  # new name of the tile list
+  mv $AT $DT  # rename this tile list file;
+    # now the tile is is marked as 'to be rendered'
+  done
+
+# download and process planet file - if necessary
+if [ "0"$(stat --print %s a.o5m 2>/dev/null) -lt $PLANETMINSIZE ]; then
+  echo $(date)"  Missing file a.o5m, downloading it." >>tc.log
+  rm -f fa.o5m
+  wget -nv $PLANETURL -O - 2>>tc.log |./osmconvert - \
+    $BORDERS -o=a.o5m 2>>tc.log
+  echo $(date)"  Updating the downloaded planet file." >>tc.log
+  rm -f b.o5m
+  ./osmupdate -v a.o5m b.o5m --day --hour \
+    --max-merge=$MAXMERGE $BORDERS --drop-author >>tc.log 2>&1
+  if [ "0"$(stat --print %s b.o5m 2>/dev/null) -gt $PLANETMINSIZE ]; then
+    echo $(date)"  Update was successful." >>tc.log
+  else
+    echo $(date)"  No update available. Dropping meta data." >>tc.log
+    ./osmconvert -v a.o5m b.o5m --drop-author >>tc.log 2>&1
+    fi
+  mv -f b.o5m a.o5m
+  if [ "0"$(stat --print %s a.o5m 2>/dev/null) -lt $PLANETMINSIZE ]; then
+    echo $(date)"  toolchain Error: could not download"\
+      $PLANETURL >>tc.log
+    exit 1
+    fi
+  fi
+
+# refill the database - if necessary
+if [ "0"$(stat --print %s fa.o5m 2>/dev/null) -lt 5 ]; then
+  echo $(date)"  Missing file fa.o5m, creating it." >>tc.log
+  rm dirty_tiles d_t/* 2>/dev/null
+  echo $(date)"  Filtering the downloaded planet file." >>tc.log
+  ./osmfilter a.o5m --parameter-file=toolchain_pt.filter \
+    -o=fa.o5m 2>>tc.log  # filter the planet file
+  ./osmconvert fa.o5m -o=gis.o5m 2>>tc.log
+    # convert to .o5m format
+  echo $(date)"  Writing filtered data into the database." >>tc.log
+  rm dirty_tiles 2>/dev/null
+  osm2pgsql $OSM2PGSQLPARAM -c gis.o5m -e 4-17 >/dev/null 2>&1
+    # enter filtered planet data into the database
+  echo $(date)"  All tiles need to be rerendered." >>tc.log
+  echo $(date)"  If the tile directory is not empty, please remove" >>tc.log
+  echo $(date)"  all outdated tile files." >>tc.log
+  fi
+
+# main loop
+while [ -e "toolchain_pt_running.txt" ]; do
+  echo $(date)"  Processing main loop." >>tc.log
+
+  # limit log file size
+  if [ "0"$(stat --print %s tc.log 2>/dev/null) -gt 6000000 ]; then
+    echo $(date)"  Reducing logfile size." >>tc.log
+    mv tc.log tc.log_temp
+    tail -c +4000000 tc.log_temp |tail -n +2 >tc.log
+    rm tc.log_temp 2>/dev/null
+    fi
+
+  #care about entries in dirty-tile list
+  while [ $(ls dirty_tiles d_t/?t* 2>/dev/null |wc -l) -gt 0 -a \
+      -e "toolchain_pt_running.txt" ]; do
+      # while still tiles to render
+
+    # start as much rendering processes as allowed
+    while [ $(ls d_t/dt* 2>/dev/null |wc -l) -gt 0 -a \
+        $(ls -1 d_t/at* 2>/dev/null |wc -l) -lt $MAXPROCESS ]; do
+        # while dirty tiles in list AND process slot(s) available
+      DT=$(ls -1 d_t/dt* |head -1)  # tile list
+      AT=${DT:0:4}a${DT:5:99}  # new name of the tile list
+      touch -c $DT  # remember rendering start time
+      mv $DT $AT  # rename this tile list file;
+        # this is our way to mark a tile list as 'being rendered now'
+      #echo $(date)"  Rendering "$DT >>tc.log
+      PROCN=$(($PROCN + 1))
+      if [ $PROCN -gt 1999 ]; then
+        PROCN=1000;  # (force range to 1000..1999)
+        fi
+      N=${PROCN:1:99}  # get last 3 digits
+      DTF=$AT PID=$N nohup ./mapnik_pt.py >/dev/null 2>&1 &
+        # render every tile in list
+      echo $(date)"  Now rendering:"\
+        $(ls -m d_t/at* 2>/dev/null|tr -d "d_t/a ") \
+        >>tc.log
+      sleep 2  # wait a bit
+      tail -30 tc.log >/var/www/html/status1
+      done
+
+    # determine if we have rendered all tiles of all lists
+    if (ls d_t/?t* >/dev/null 2>&1); then  # still tiles to render
+      sleep 11  # wait some seconds
+  continue  # care about rendering again
+      fi
+    # here: we have rendered all tiles of all lists
+
+    # care about dirty-tiles master list and split it into parts
+    if (ls dirty_tiles >/dev/null 2>&1); then
+        # there is a dirty-tiles master list
+      echo $(date)"  Expanding \"dirty_tiles\" file." >>tc.log
+      ./dtexpand 4 17 <dirty_tiles >dirty_tiles_ex 2>/dev/null
+      mv -f dirty_tiles_ex dirty_tiles 2>/dev/null
+      echo $(date)"  Splitting dirty-tiles list" \
+        "("$(cat dirty_tiles |wc -l)" tiles)" >>tc.log
+      grep --color=never -e "tiles)" -e "newest hourly timestamp" tc.log >/var/www/html/status
+      split -l 1000 -d -a 6 dirty_tiles d_t/dt
+      echo "*** "$(date) >>dt.log
+      cat dirty_tiles >>dt.log  # add list to dirty-tiles log
+      rm dirty_tiles 2>/dev/null
+      # limit dirty-tiles log file size
+      if [ "0"$(stat --print %s dt.log 2>/dev/null) -gt 750000000 ]; then
+        echo $(date)"  Reducing dirty-tiles logfile size." >>tc.log
+        mv dt.log dt.log_temp
+        tail -c +500000000 dt.log_temp |tail -n +2 >dt.log
+        rm dt.log_temp 2>/dev/null
+        fi
+      fi
+
+    done  # while still tiles to render
+  if [ ! -e "toolchain_pt_running.txt" ]; then  # script shall be terminated
+continue;  # exit the main loop via while statement
+    fi
+  # here: all tiles have been rendered
+
+  # update the local planet file
+  echo $(date)"  Updating the local planet file." >>tc.log
+  rm b.o5m fb.o5m 2>/dev/null
+  # for maintenance only:
+  #echo $(date)"---> Waiting 24 hours." >>tc.log
+  #sleep 86400
+  #echo $(date)"---> Resuming work after wait." >>tc.log
+  ./osmupdate -v a.o5m b.o5m --day --hour \
+    --max-merge=$MAXMERGE $BORDERS --drop-author >>tc.log 2>&1
+
+  if [ "0"$(stat --print %s b.o5m 2>/dev/null) -lt \
+      $(expr "0"$(stat --print %s a.o5m 2>/dev/null) \* 9 / 10) ]; then
+      # if new osm file smaller than 90% of the old file's length
+    # wait a certain time and retry the update
+    I=0
+    while [ $I -lt 33 -a -e "toolchain_pt_running.txt" ]; do  # (33 min)
+      sleep 60
+      I=$(( $I + 1 ))
+      done
+continue
+    fi
+
+  # filter the new planet file
+  echo $(date)"  Filtering the new planet file." >>tc.log
+  ./osmfilter b.o5m --parameter-file=toolchain_pt.filter -o=fb.o5m \
+    2>>tc.log
+
+  # calculate difference between old and new filtered file
+  echo $(date)"  Calculating diffs between old and new filtered file."\
+    >>tc.log
+  ./osmconvert fa.o5m fb.o5m --diff-contents --fake-lonlat \
+    --out-osc|gzip -1 >gis.osc.gz 2>>tc.log
+
+  # check if the diff file is too small
+  if [ "0"$(stat --print %s gis.osc.gz 2>/dev/null) -lt 10 ]; then
+    echo $(date)"  Error: diff file is too small." >>tc.log
+    exit 2
+    fi
+
+  # enter differences into the database
+  echo $(date)"  Writing differential data into the database." >>tc.log
+  osm2pgsql $OSM2PGSQLPARAM -a gis.osc.gz -e 4-17 >/dev/null 2>&1
+
+  # replace old files by the new ones
+  echo $(date)"  Replacing old files by the new ones." >>tc.log
+  ls -lL a.o5m fa.o5m b.o5m fb.o5m gis.o5m gis.osc.gz >>tc.log
+  mv -f a.o5m a_old.o5m
+  mv -f fa.o5m fa_old.o5m
+  mv -f b.o5m a.o5m
+  mv -f fb.o5m fa.o5m
+
+  # check if there are any tiles affected by this update
+  if [ "0"$(stat --print %s dirty_tiles 2>/dev/null) -lt 5 ]; then
+    echo $(date)"  There are no tiles affected by this update." >>tc.log
+    rm -f dirty_tiles
+    fi
+
+  # wait a certain time to give other maps a chance for rendering
+  I=0
+  while [ $I -lt 30 -a -e "toolchain_pt_running.txt" ]; do  # (30 min)
+    sleep 60
+    I=$(( $I + 1 ))
+    done
+
+  done  # main loop
+
+# wait until every rendering process has terminated
+while (ls d_t/at* 2>/dev/null) ; do sleep 30; done
+
+# publish that this script has ended
+rm toolchain_pt_running.txt 2>/dev/null
+echo "The toolchain script ended at "$(date)"." \
+  >toolchain_pt_ended.txt
+
+```
+
+
+As usual, the file must be made executable:
+
+```
+cd /home/pt/pt
+chmod +x toolchain_pt.sh
+
+```
+
+
+There is one border polygon file you will need if you run the script for Mittelfranken region (thats the region where Nürnberg is in). Download that polygon file and then start the script as background process:
+
+```
+cd /home/pt/pt
+wget http://download.geofabrik.de/europe/germany/bayern/mittelfranken.poly
+nohup ./toolchain_pt.sh &
+
+```
+
+
+You can watch the rendering process(es) by invoking the process monitor _top_:
+
+```
+top -u pt
+
+```
+
+
+Other Strategies
+----------------
+
+Mapnik experts will have noticed that the rendering strategy which has been introduced on this page does not represent the standard solution. Most Slippy Map installations will use the more comfortable Tirex/Modtile tools to define which tiles when to render. Furthermore, of course, you usually do not render regularly sized tiles but so-called _meta tiles_ instead, which are 16 or 64 times larger. On standard maps this increases rendering speed significantly. It would be interesting to know if there are advantages for diff-based rendered thematic maps too because you would have to render a lot of areas which have not changed.
+
+Please feel free to add your experiences here if you have tried different methods and had the opportunity to compare them.
+
+Benchmarks
+----------
+
+Be prepared that in the first run every affected tile of your thematic layer will be rendered. This may take between one hour and a few weeks, depending on the available hardware, the size of the chosen geographical region and the density of the thematic data.
+
+The planet-wide public transport map, for example, took a bit more than two days to be initially rendered on a quad core CPU. The statistics in detail:
+
+*   35 minutes downloading and converting the planet file
+*   15 minutes initially updating the planet file
+*   15 minutes filtering the planet file
+*   15 minutes writing the filtered data into the database
+*   50 hours rendering all tiles of the public transport overlay (18 Mio. tiles)
+
+Updates run faster. An average update takes less than a day. In detail (example):
+
+*   15 minutes updating the planet file
+*   15 minutes filtering the updated planet file
+*   10 seconds calculating the differences between old and new filtered data
+*   20 minutes writing the differences of the filtered data into the database
+*   12 hours rerendering the modified tiles of the public transport overlay
+
+Troubleshooting
+---------------
+
+Too many links
+
+If this message occurs during rendering, you most likely are using a file system which supports only a limited number of subdirectories (e.g. ext2 or ext3). Please upgrade to ext4. The migration from ext3 to ext4 should be possible without any loss of data. Please refer to the users guide of your operating system.

@@ -1,0 +1,12 @@
+{
+  "title": "グラフ管理",
+  "showGraph": "グラフを表示",
+  "hideGraph": "グラフを非表示",
+  "stops": "停留所",
+  "enableStopMode": "停止モードを有効化",
+  "disableStopMode": "停止モードを無効化",
+  "stopModeHint": "停止モードが有効です。地図上の駅をクリックしてブロック状態を切り替えます。",
+  "blockedStops": "ブロック中の停留所",
+  "restoreAll": "すべて復元",
+  "noBlockedStops": "現在ブロックされている停留所はありません。"
+}

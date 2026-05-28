@@ -1,0 +1,207 @@
+/* ══════════════════════════════════════════════════════════
+   Components — Toast, Spinner, Language Switcher, Animations
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Toast Notifications ─────────────────────────────────── */
+
+#toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  min-width: 240px;
+  max-width: 360px;
+  box-shadow: var(--shadow-md);
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  opacity: 0;
+}
+
+.toast.toast-enter {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast.toast-exit {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.toast-success {
+  background: #065f46;
+  border: 1px solid #059669;
+}
+
+.toast-error {
+  background: #7f1d1d;
+  border: 1px solid #dc2626;
+}
+
+.toast-info {
+  background: #1e3a5f;
+  border: 1px solid #3b82f6;
+}
+
+.toast-msg {
+  flex: 1;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.toast-close:hover {
+  color: #fff;
+}
+
+/* ── Loading Spinner ─────────────────────────────────────── */
+
+#loading-spinner {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  transition: opacity var(--transition);
+}
+
+#loading-spinner.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.spinner-dot {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(79, 70, 229, 0.3);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Language Switcher ───────────────────────────────────── */
+
+.lang-switcher {
+  position: relative;
+}
+
+.lang-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition);
+}
+
+.lang-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.lang-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  background: #1a1a2e;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  min-width: 150px;
+}
+
+.lang-menu.hidden {
+  display: none;
+}
+
+.lang-option {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background var(--transition);
+}
+
+.lang-option:hover {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+/* ── Leaflet overrides ───────────────────────────────────── */
+
+.leaflet-control-zoom {
+  margin-top: 16px !important;
+  margin-right: 16px !important;
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden;
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(15, 15, 28, 0.85) !important;
+  backdrop-filter: blur(8px);
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+  transition: background var(--transition) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(79, 70, 229, 0.7) !important;
+  color: #fff !important;
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

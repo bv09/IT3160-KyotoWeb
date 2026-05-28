@@ -1,0 +1,16 @@
+{
+  "title": "経路検索",
+  "from": "出発地",
+  "to": "目的地",
+  "fromPlaceholder": "出発駅または場所...",
+  "toPlaceholder": "目的地の駅または場所...",
+  "useLocation": "現在地を使う",
+  "swapDirections": "出発地と目的地を入れ替え",
+  "modes": {
+    "subway": "地下鉄",
+    "bus": "バス",
+    "walk": "徒歩"
+  },
+  "selectPoints": "地点を選択",
+  "selectPointsHint": "「地点を選択」をクリックし、地図上で2つの地点をクリックして最速ルートを検索します。"
+}

@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "Kyoto Metro",
+    "tagline": "Public Transport Routing",
+    "footer": "IT3160 — Kyoto Subway Pathfinder"
+  },
+  "roles": {
+    "user": "User",
+    "admin": "Admin"
+  },
+  "actions": {
+    "close": "Close",
+    "clear": "Clear",
+    "search": "Search",
+    "cancel": "Cancel",
+    "retry": "Retry"
+  }
+}
