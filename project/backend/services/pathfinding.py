@@ -1,106 +1,57 @@
-"""Thuật toán Dijkstra tìm đường đi ngắn nhất trên SubwayGraph."""
+"""Routing orchestrator — resolves coordinates to nodes and delegates
+to the pluggable algorithm system.
+
+The original ``PathResult`` dataclass is re-exported from
+``backend.models.types`` for backward compatibility.  The
+``find_shortest_path`` function signature is kept identical so that
+existing callers (``api.py``) continue to work without changes.
+"""
 
 from __future__ import annotations
 
-import heapq
 import logging
-from dataclasses import dataclass
 
-from backend.utils.convert_to_time import convert_walk_time, convert_subway_time
 from backend.models.graph import SubwayGraph
+from backend.models.types import PathResult, RoutingConstraints  # noqa: F401 — re-export
+from backend.services.algorithms import get_algorithm
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class PathResult:
-    """Kết quả tìm đường đi ngắn nhất.
-
-    Attributes:
-        path: Danh sách [(lat, lon), stop_name] theo thứ tự từ start → end.
-        distance_meters: Tổng khoảng cách (mét).
-    """
-    path: list[tuple[tuple[float, float], str | None]]
-    distance_meters: float
-    estimate_time: float
 
 def find_shortest_path(
     graph: SubwayGraph,
     start_coord: list[float],
     end_coord: list[float],
+    algorithm: str | None = None,
+    constraints: RoutingConstraints | None = None,
 ) -> PathResult | None:
-    """Tìm đường đi nhanh nhất giữa 2 tọa độ.
+    """Find the fastest path between two coordinates.
+
+    This is the main entry point used by the API layer.  It resolves
+    lat/lon coordinates to graph node ids, picks the requested algorithm,
+    and delegates.
 
     Args:
-        graph: Đồ thị mạng lưới đường sắt.
-        start_coord: Tọa độ [lat, lon] điểm bắt đầu.
-        end_coord: Tọa độ [lat, lon] điểm kết thúc.
+        graph: The transit graph to search.
+        start_coord: ``[lat, lon]`` of the origin.
+        end_coord: ``[lat, lon]`` of the destination.
+        algorithm: Algorithm name (``"dijkstra"``, ``"astar"``,
+            ``"transfer_aware"``).  Defaults to Dijkstra.
+        constraints: Optional routing preferences.
 
     Returns:
-        PathResult nếu tìm được đường, None nếu không có đường.
+        A ``PathResult`` on success, ``None`` if no path exists.
     """
     start_node = graph.get_node_by_coord(start_coord[0], start_coord[1])
     end_node = graph.get_node_by_coord(end_coord[0], end_coord[1])
 
     if start_node is None or end_node is None:
         logger.warning(
-            "Không tìm thấy node cho tọa độ: start=%s, end=%s", start_coord, end_coord
+            "Coordinate not found in graph: start=%s, end=%s",
+            start_coord,
+            end_coord,
         )
         return None
 
-    if start_node not in graph.adjacency or end_node not in graph.adjacency:
-        logger.warning(
-            "Node không tồn tại trong đồ thị: start=%s, end=%s", start_node, end_node
-        )
-        return None
-
-    # Dijkstra
-    previous = {start_node: None}
-    cost_time = {start_node: 0.0}
-    distance_cost = {start_node: 0.0}
-    heap = [(0.0, start_node)]
-
-    while heap:
-        current_cost, current_node = heapq.heappop(heap)
-        if (current_node in graph.blocked_node and graph.blocked_node[current_node]):
-            continue
-        
-        if current_node == end_node:
-            break
-
-        if current_cost > cost_time.get(current_node, float("inf")):
-            continue
-
-        for neighbor, edge_distance, edge_cost in graph.adjacency.get(current_node, []):
-            new_cost = current_cost + edge_cost
-            new_distance = distance_cost.get(current_node, 0.0) + edge_distance
-            if new_cost < cost_time.get(neighbor, float("inf")):
-                cost_time[neighbor] = new_cost
-                distance_cost[neighbor] = new_distance
-                previous[neighbor] = current_node
-                heapq.heappush(heap, (new_cost, neighbor))
-
-    # Kiểm tra xem có đường đi không
-    if cost_time.get(end_node, float("inf")) == float("inf"):
-        return None
-
-    # Truy vết đường đi
-    path = []
-    current = end_node
-    while current is not None:
-        coord = graph.get_coord_by_node(current)
-        if (graph.get_stop_name(current)):
-            stop_name = graph.get_stop_name(current)
-            type = "stop"
-        elif (graph.get_entrance_name(current)):
-            stop_name = graph.get_entrance_name(current)
-            type = "entrance"
-        else:
-            stop_name = None
-            type = "node"
-        
-        path.append((coord, stop_name, type))
-        current = previous.get(current)
-    path.reverse()
-
-    return PathResult(path=path, distance_meters = distance_cost[end_node], estimate_time = cost_time[end_node])
+    router = get_algorithm(algorithm)
+    return router.find_path(graph, start_node, end_node, constraints)

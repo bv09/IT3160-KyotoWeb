@@ -127,7 +127,8 @@ def _build_graph(osm_data: dict) -> SubwayGraph:
                         )
                         continue
                     distance = manhattan_distance(stop["lat"], stop["lon"], entrance["lat"], entrance["lon"])
-                    graph.add_undirected_edge(stop["ref"], entrance["ref"], distance * 1.1, convert_walk_time(distance * 1.1))
+                    graph.add_undirected_edge(stop["ref"], entrance["ref"], distance * 1.1, convert_walk_time(distance * 1.1),
+                                              edge_type="entrance")
 
             # Kết nối giữa các stop trong cùng 1 stop_area
             for i in range(len(stop_nodes)):
@@ -135,7 +136,8 @@ def _build_graph(osm_data: dict) -> SubwayGraph:
                     stop1 = stop_nodes[i]
                     stop2 = stop_nodes[j]
                     distance = manhattan_distance(stop1["lat"], stop1["lon"], stop2["lat"], stop2["lon"])
-                    graph.add_undirected_edge(stop1["ref"], stop2["ref"], distance, convert_walk_time(distance))
+                    graph.add_undirected_edge(stop1["ref"], stop2["ref"], distance, convert_walk_time(distance),
+                                              edge_type="transfer")
     
     
     #Kết nối giữa các entrances không có trong relation với stop gần nhất   
@@ -158,7 +160,8 @@ def _build_graph(osm_data: dict) -> SubwayGraph:
                     closest_stop = stop_id
             
             if closest_stop is not None:
-                graph.add_undirected_edge(element["id"], closest_stop, closest_distance, convert_walk_time(closest_distance))
+                graph.add_undirected_edge(element["id"], closest_stop, closest_distance, convert_walk_time(closest_distance),
+                                          edge_type="entrance")
             else:
                 logger.warning("Không tìm thấy stop nào gần entrance %d. Bỏ qua.", element["id"])
     return graph
@@ -208,21 +211,26 @@ def _process_way(graph: SubwayGraph, way: dict) -> None:
         # Nếu là đường một chiều, chỉ thêm cạnh từ node1 → node2
         # Chiều Subway luôn được ưu tiên xử lý như một chiều theo thứ tự nodes trong way
         if way.get("tags") is not None and way["tags"].get("railway") == "subway":
-            graph.add_edge(node1, node2, distance, convert_subway_time(distance))
+            graph.add_edge(node1, node2, distance, convert_subway_time(distance),
+                           edge_type="subway", route_id=way.get("id"))
             graph.register_way(node1, way["id"])
-            graph.register_way(node2, way["id"]) 
-            
+            graph.register_way(node2, way["id"])
+
         elif way.get("tags") == 'forward':
-            graph.add_edge(node1, node2, distance, convert_walk_time(distance))
-            
+            graph.add_edge(node1, node2, distance, convert_walk_time(distance),
+                           edge_type="walk")
+
         elif way.get("tags") == 'backward':
-            graph.add_edge(node2, node1, distance, convert_walk_time(distance))
-            
+            graph.add_edge(node2, node1, distance, convert_walk_time(distance),
+                           edge_type="walk")
+
         elif is_oneway:
-            graph.add_edge(node1, node2, distance, convert_walk_time(distance))
-            
+            graph.add_edge(node1, node2, distance, convert_walk_time(distance),
+                           edge_type="walk")
+
         else:
-            graph.add_undirected_edge(node1, node2, distance, convert_walk_time(distance))
+            graph.add_undirected_edge(node1, node2, distance, convert_walk_time(distance),
+                                      edge_type="walk")
             
 if __name__ == "__main__":
     graphs = load_graph("data/raw_osm_data.json")

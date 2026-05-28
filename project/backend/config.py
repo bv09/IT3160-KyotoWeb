@@ -1,13 +1,28 @@
-"""Cấu hình ứng dụng theo môi trường (development / production / testing)."""
+"""Application configuration per environment (development / production / testing)."""
 
 import os
 
 
 class BaseConfig:
-    """Cấu hình chung cho tất cả môi trường."""
+    """Common configuration for all environments."""
+
     DATA_FILE = os.environ.get("DATA_FILE", "data/raw_osm_data.json")
     HOST = os.environ.get("HOST", "0.0.0.0")
     PORT = int(os.environ.get("PORT", 5010))
+
+    # Database mode — set USE_DATABASE=true to enable PostgreSQL/PostGIS
+    DATABASE_URL = os.environ.get(
+        "DATABASE_URL",
+        "postgresql://kyoto:password@localhost:5432/kyoto_transit",
+    )
+    USE_DATABASE = (
+        os.environ.get("USE_DATABASE", "false").lower() == "true"
+    )
+
+    # External routing
+    ORS_TOKEN = os.environ.get("ORS_TOKEN", "")
+    OSRM_URL = os.environ.get("OSRM_URL", "")
+    WALKING_ENGINE = os.environ.get("WALKING_ENGINE", "internal")  # "internal" | "osrm" | "ors"
 
 
 class DevelopmentConfig(BaseConfig):

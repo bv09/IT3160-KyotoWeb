@@ -1,4 +1,4 @@
-.PHONY: install fetch-data run test docker-up docker-down clean
+.PHONY: install fetch-data run test docker-up docker-down clean db-init db-migrate import-osm
 
 install:
 	python -m pip install -r requirements.txt
@@ -17,6 +17,15 @@ docker-up:
 
 docker-down:
 	docker-compose down
+
+db-init:
+	python -c "from backend.db.models import Base; from backend.db.engine import get_engine; Base.metadata.create_all(get_engine()); print('Tables created.')"
+
+db-migrate:
+	alembic upgrade head
+
+import-osm:
+	python -m backend.scripts.import_osm
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; true
