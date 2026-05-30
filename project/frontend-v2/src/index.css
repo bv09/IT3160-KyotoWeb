@@ -84,3 +84,8 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0 !important;
+}

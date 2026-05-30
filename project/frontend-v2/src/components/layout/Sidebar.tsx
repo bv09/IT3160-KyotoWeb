@@ -46,20 +46,21 @@ export default function Sidebar() {
       <AnimatePresence mode="wait">
         {isOpen && (
           <motion.aside
-            key="floating-panel"
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="fixed left-6 top-4 z-[1000] max-h-[calc(100vh-2rem)] w-[360px] max-w-[420px] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5"
-          >
-            <Card
-              size="sm"
-              className="floating-panel flex flex-col w-full min-w-0 min-h-0 border-0 overflow-hidden !rounded-none !ring-0 !py-0"
-            >
+  key="floating-panel"
+  initial={{ opacity: 0, x: -40 }}
+  animate={{ opacity: 1, x: 0 }}
+  exit={{ opacity: 0, x: -40 }}
+  transition={{ duration: 0.25, ease: 'easeOut' }}
+  className="fixed left-6 top-4 z-[1000] flex flex-col max-h-[calc(100vh-2rem)] w-[360px] max-w-[420px] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5"
+>
+  {/* 2. Thêm 'flex-1' vào Card để nó giãn lấp đầy aside */}
+  <Card
+    size="sm"
+    className="floating-panel flex flex-col flex-1 w-full min-w-0 min-h-0 border-0 overflow-hidden !rounded-none !ring-0 !py-0"
+  >
               {/* ── Blue header ── */}
-              <CardHeader className="floating-panel-header !rounded-t-2xl px-4 py-3 border-0">
-                <div className="flex items-center justify-between w-full">
+              <CardHeader className="floating-panel-header shrink-0 !rounded-t-2xl px-4 py-3 border-0">
+  <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                       <Train className="w-4.5 h-4.5 text-white" />
@@ -100,11 +101,11 @@ export default function Sidebar() {
               </div>
 
               {/* ── Scrollable content ── */}
-              <CardContent className="floating-panel-content flex-1 min-h-0 overflow-hidden p-0">
-                {mode === 'route-search' ? <RouteSearch /> : <StationManager />}
-              </CardContent>
-            </Card>
-          </motion.aside>
+              <CardContent className="floating-panel-content flex flex-col flex-1 min-h-0 overflow-hidden p-0">
+      {mode === 'route-search' ? <RouteSearch /> : <StationManager />}
+    </CardContent>
+  </Card>
+</motion.aside>
         )}
       </AnimatePresence>
     </>

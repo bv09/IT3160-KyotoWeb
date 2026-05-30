@@ -53,9 +53,13 @@
 }
 
 .floating-panel-content {
-  scrollbar-gutter: stable;
+  overflow-x: hidden !important;
 }
-
+.route-search,
+.station-manager,
+.station-list {
+  overflow-x: hidden !important;
+}
 /* Keep legacy sidebar selector for backward compat — now unused, but harmless */
 .sidebar {
   display: none;
@@ -113,6 +117,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden; /* Cắt bỏ thanh cuộn ngang */
 }
 
 .location-input-group {
@@ -163,6 +171,8 @@
 
 .location-input-wrapper input {
   flex: 1;
+  min-width: 0;
+  width: 0; /* Thêm dòng này: Cắt đứt hoàn toàn chiều rộng mặc định của input */
   border: none;
   outline: none;
   font-size: 0.85rem;
@@ -196,7 +206,7 @@
 
 .swap-btn {
   position: absolute;
-  right: -8px;
+  right: 8px; /* Thay đổi từ -8px thành 8px để kéo nút vào trong */
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
@@ -500,6 +510,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0; /* Thêm dòng này */
+  word-wrap: break-word; /* Thêm dòng này */
 }
 
 .timeline-content .station-name {
@@ -551,8 +563,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* Thay đổi chiều cao thành flex: 1 */
+  flex: 1;
   min-height: 0;
-  height: 100%;
+  /* Xóa height: 100%; vì nó vô tác dụng trong flex container */
 }
 
 .station-manager .description {
@@ -665,6 +679,28 @@
   color: #9ca3af;
   background: rgba(156, 163, 175, 0.1);
 }
+/* Toggle switch visibility & track transition */
+.station-row [data-slot="switch"] {
+  background-color: #d1d5db !important;
+  border-color: #9ca3af !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease !important;
+}
+
+.station-row [data-slot="switch"][data-checked] {
+  background-color: #4338ca !important;
+  border-color: #4338ca !important;
+}
+
+/* Fix thumb (quả bóng) animation & sliding */
+.station-row [data-slot="switch-thumb"] {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform: translateX(0px) !important; /* Vị trí mặc định bên trái */
+}
+
+.station-row [data-slot="switch"][data-checked] [data-slot="switch-thumb"] {
+  transform: translateX(10px) !important; /* Trượt sang phải 10px (vừa khít rãnh 24px) */
+}
+
 
 /* ── Disabled stations summary ── */
 .disabled-summary {
