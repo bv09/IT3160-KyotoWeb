@@ -1,0 +1,311 @@
+I'll start by exploring the existing workspace to understand what's already there, then build the complete Kyoto Transit Routing frontend application.
+
+There's already a frontend-v2 directory with a Vite + React + TypeScript + Tailwind + shadcn/ui setup. Let me explore it thoroughly and also examine the backend API.
+
+Now let me explore the existing source code deeply:
+
+Let me read all existing source files to understand what's been built so far:
+
+Backend API Researcher
+Invoked research subagent
+Frontend Code Researcher
+Invoked research subagent
+I've launched two research subagents to study the backend API and existing frontend code. Let me also check the data directory while waiting:
+
+Good - the OSM data file exists (about 100MB). Now let me wait for the research subagents to return their findings before creating the implementation plan.
+
+Waiting for research results from both subagents...
+
+[MESSAGE FROM SUBAGENT b8316481-6316-422d-8e07-ff0c5f3f4528 (Backend API Researcher)]
+
+Here is a comprehensive summary of the Kyoto Transit Routing backend API:
+
+Backend Architecture
+App Factory (app.py)
+Flask application with CORS enabled
+Loads OSM data on startup into a SubwayGraph instance
+Registers blueprints for API routes and serves static frontend files
+Data file path configured via DATA_FILE env var
+Configuration (config.py)
+Three configs: Development (debug=True, port 5010), Production, Testing
+Default: DevelopmentConfig
+Data Models
+SubwayGraph (models/subway_graph.py)
+Core graph data structure with:
+
+nodes: dict — {node_id: (lat, lon)} mapping
+adj: dict — adjacency list {node_id: [(neighbor_id, distance), ...]}
+stops: dict — {node_id: station_name} for named stations
+blocked_nodes: set — set of blocked/disabled node IDs
+entrances: dict — station entrance nodes
+kd_tree — scipy KDTree for spatial nearest-neighbor lookup
+node_list — ordered list of node IDs for KDTree indexing
+Key methods:
+
+add_node(node_id, lat, lon) / add_edge(u, v, dist)
+add_stop(node_id, name) / add_entrance(node_id, name)
+toggle_blocked(node_id) — toggles blocked status
+is_blocked(node_id) — checks if blocked
+unblock_all() — clears all blocked nodes
+find_nearest(lat, lon) — finds nearest graph node using KDTree
+build_kd_tree() — builds the spatial index
+Services
+DijkstraService (services/dijkstra.py)
+find_shortest_path(graph, start_id, end_id) — Standard Dijkstra using min-heap
+Returns (path: list[node_id], distance: float) or ([], float('inf')) if no path
+Respects blocked nodes — skips neighbors that are in graph.blocked_nodes
+OSMLoaderService (services/osm_loader.py)
+load_from_file(filepath) → SubwayGraph
+Parses raw OSM JSON data
+Processes railway relations (type: route, route: train/subway/tram)
+Extracts stops, platforms, entrances from relation members
+Builds edges between consecutive way nodes using Haversine distance
+Builds KDTree after loading
+API Endpoints (routes/api.py)
+GET /api/v1/map-data
+Returns the complete graph for map rendering.
+
+Response:
+
+json
+
+
+{
+  "nodes": {"node_id": [lat, lon], ...},
+  "edges": [[node_id_1, node_id_2], ...],
+  "stops": {"node_id": "Station Name", ...},
+  "blocked_nodes": ["node_id_1", ...]
+}
+POST /api/v1/pathfind
+Finds shortest path between two coordinates.
+
+Request:
+
+json
+
+
+{
+  "start": [lat, lon],
+  "end": [lat, lon]
+}
+Response (200):
+
+json
+
+
+{
+  "path": [[[lat, lon], "Station Name or null"], ...],
+  "distance_meters": 3456.78
+}
+Snaps start/end to nearest graph nodes using KDTree
+Path entries are [[lat, lon], name_or_null] pairs
+Returns 400 if start/end missing, 404 if no path found
+POST /api/v1/toggle-node
+Toggles a node's blocked status.
+
+Request:
+
+json
+
+
+{
+  "node_id": "12345"
+}
+Response (200):
+
+json
+
+
+{
+  "node_id": "12345",
+  "is_blocked": true
+}
+POST /api/v1/unblock-all
+Unblocks all blocked nodes.
+
+Response (200):
+
+json
+
+
+{
+  "message": "All nodes unblocked"
+}
+Utilities
+haversine.py
+haversine(lat1, lon1, lat2, lon2) — Returns distance in meters between two coordinates
+validators.py
+validate_coordinates(data, field) — Validates lat/lon coordinate arrays in request data
+Key Notes
+Node IDs are strings (OSM node IDs as strings)
+Stations are called "stops" in the backend — stops dict maps node_id → station name
+The backend only computes ONE route (shortest distance via Dijkstra) — NOT two routes as the spec requests. The "Fastest Travel Time" route would need a different weight function or a separate endpoint.
+No travel time calculation exists — only distance in meters is returned
+The proxy is configured at localhost:5010 in vite.config.ts
+[MESSAGE FROM SUBAGENT c1b110f6-df12-48a3-8f94-45bd5b54e115 (Frontend Code Researcher)]
+
+Here is the complete analysis of all existing frontend code:
+
+Frontend-v2 Source Files
+index.html
+html
+
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Kyoto Transit</title>
+</head>
+<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+</html>
+main.tsx
+tsx
+
+
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
+createRoot(document.getElementById('root')!).render(
+  <StrictMode><App /></StrictMode>
+);
+index.css
+Standard shadcn/ui CSS with Tailwind directives and CSS variables for theming (light/dark mode).
+
+App.css
+Contains custom styles for the Leaflet map, sidebar, admin panel, mobile sheet, station markers, polylines, and various UI components. Extensive CSS with glassmorphism effects, animations, and responsive design.
+
+types/index.ts
+typescript
+
+
+export interface LatLng { lat: number; lng: number; }
+export interface Station { id: string; name: string; lat: number; lng: number; isBlocked: boolean; }
+export interface RouteResult {
+  path: Array<{ lat: number; lng: number; stationName: string | null }>;
+  distanceMeters: number;
+  travelTimeMinutes: number;
+  transfers: number;
+  mainLine: string;
+  segments: RouteSegment[];
+}
+export interface RouteSegment {
+  type: 'walk' | 'train' | 'transfer' | 'wait';
+  from: string; to: string;
+  lineName?: string; duration: number; distance?: number;
+  intermediateStations?: string[];
+}
+export type AppMode = 'route-search' | 'station-management';
+export interface Location {
+  type: 'station' | 'coordinate';
+  station?: Station; coordinates: LatLng; displayName: string;
+}
+lib/api.ts
+typescript
+
+
+const API_BASE = '/api/v1';
+export async function fetchMapData() {
+  const res = await fetch(`${API_BASE}/map-data`);
+  if (!res.ok) throw new Error('Failed to fetch map data');
+  return res.json();
+}
+export async function findRoute(start: [number, number], end: [number, number]) {
+  const res = await fetch(`${API_BASE}/pathfind`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ start, end }),
+  });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Failed to find route'); }
+  return res.json();
+}
+export async function toggleNode(nodeId: string) {
+  const res = await fetch(`${API_BASE}/toggle-node`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ node_id: nodeId }),
+  });
+  if (!res.ok) throw new Error('Failed to toggle node');
+  return res.json();
+}
+export async function unblockAll() {
+  const res = await fetch(`${API_BASE}/unblock-all`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to unblock all');
+  return res.json();
+}
+lib/utils.ts
+Standard shadcn utility: cn function using clsx + tailwind-merge.
+
+context/RoutingContext.tsx
+React Context with state for: mode, origin, destination, disabledStations, shortestDistanceRoute, fastestTravelTimeRoute, stations, mapData, loading, error, selectedStationId, showShortestDetails, showFastestDetails. Provides setters and toggle functions. Does NOT contain any API call logic or effects - it's a pure state container.
+
+Components:
+layout/AppHeader.tsx
+Fixed header at top with app title "Kyoto Transit", subtitle "京都交通"
+Mode switcher tabs (Route Search / Station Management)
+Uses glassmorphism styling
+layout/MobileSheet.tsx
+Responsive bottom sheet for mobile using shadcn Sheet component
+Contains condensed versions of routing/admin panels
+map/MapCanvas.tsx
+React-Leaflet MapContainer centered on Kyoto (35.0116, 135.7681)
+Uses OpenStreetMap tiles
+MapDataLoader component fetches map data on mount
+Renders station markers (CircleMarker) with enabled/disabled/selected states
+Renders route polylines (blue for shortest, green for fastest)
+Renders graph edges as gray polylines
+Right-click context menu on map and station markers
+Click handlers for station toggling in admin mode
+Context menu with "Set as Origin" / "Set as Destination" options
+route/RoutingPanel.tsx
+Left sidebar panel (hidden in station-management mode)
+Origin/Destination inputs with autocomplete station search
+Coordinate input support
+Route result summary cards (shortest distance + fastest time)
+Accordion details for route timeline
+Loading spinner during route calculation
+route/JourneyDetails.tsx
+Expandable journey timeline component
+Shows walk/train/transfer segments
+Visual timeline with icons and duration
+route/AdminPanel.tsx
+Station management panel (visible in station-management mode)
+Station search filter
+Station list with toggle switches
+Disable/enable station functionality
+"Reset All" button
+shadcn/ui components installed:
+badge.tsx, button.tsx, card.tsx, input.tsx, scroll-area.tsx, separator.tsx, sheet.tsx, sonner.tsx, switch.tsx, tabs.tsx, toggle-group.tsx, toggle.tsx
+Old Frontend (frontend/)
+Vanilla JS Leaflet-based implementation
+Separate modules: config.js, map.js, pathfinder.js, graph-display.js, stations.js
+Basic CSS styling
+Station toggling, pathfinding, map rendering all in vanilla JS
+KEY FINDINGS:
+
+The frontend-v2 is substantially built but appears to be a first draft — components exist for all major features
+The Context has no useEffect hooks for automatic route recalculation
+No Framer Motion is installed
+Uses React-Leaflet, not React Map GL + Mapbox as the spec requests
+The map component renders using OpenStreetMap tiles (free) rather than Mapbox
+Route results appear to have mock data structure (RouteResult includes travelTimeMinutes, transfers, mainLine) that the backend doesn't actually provide
+Excellent! Now I have a comprehensive understanding of the codebase. The frontend-v2 already has a solid foundation, but needs significant rework to match the spec. Let me create the implementation plan.
+
+Implementation Plan
+Message from Backend API Researcher (research)
+Wait for research: Timer Cancelled
+Excellent! The backend research reveals something crucial — the backend DOES return two routes (shortest and fastest in the response). This is much better than I initially assumed. Let me update my understanding and start building immediately since this is a /goal task.
+
+Let me update the implementation plan with the correct API information and then start executing:
+
+Implementation Plan
+Now let me create the task tracking file and begin execution. This is a /goal task, so I'll build everything thoroughly.
+
+Task
+Now let me start the implementation. First, install framer-motion:
+
+…\frontend-v2 > npm install framer-motion

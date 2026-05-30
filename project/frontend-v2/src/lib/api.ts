@@ -1,15 +1,29 @@
 import type {
-  RouteResponse,
-  PathSegment,
-  PathResult,
+  RouteResponse as RawRouteResponse,
+  PathResult as RawPathResult,
   GraphEdgesResponse,
   MapDataResponse,
   ToggleResponse,
   UnblockAllResponse,
   LatLng,
+  PathSegment,
 } from '@/types';
 
 const BASE = '';
+
+type RawSegment = [number[], string | null, string, boolean, string | null];
+
+interface RawPathResultNormalized {
+  path: RawSegment[];
+  distance_meters: number;
+  estimate_time: number;
+  waypoints?: { name: string; type: string }[];
+}
+
+interface RawRouteResponseNormalized {
+  fastest: RawPathResultNormalized | null;
+  shortest: RawPathResultNormalized | null;
+}
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
@@ -24,7 +38,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-function normalizePathResult(raw: PathResult | null): {
+function normalizePath(raw: RawPathResultNormalized | null): {
   path: PathSegment[];
   distanceMeters: number;
   estimateTime: number;
@@ -32,12 +46,12 @@ function normalizePathResult(raw: PathResult | null): {
 } | null {
   if (!raw || !raw.path) return null;
   return {
-    path: raw.path.map((seg) => ({
-      coord: seg.coord,
-      name: seg.name,
-      type: seg.type,
-      isSubway: seg.isSubway,
-      wayName: seg.wayName,
+    path: raw.path.map((seg: RawSegment) => ({
+      coord: [seg[0][0], seg[0][1]] as LatLng,
+      name: seg[1],
+      type: seg[2] as PathSegment['type'],
+      isSubway: seg[3],
+      wayName: seg[4],
     })),
     distanceMeters: raw.distance_meters,
     estimateTime: raw.estimate_time,
@@ -46,13 +60,13 @@ function normalizePathResult(raw: PathResult | null): {
 }
 
 export async function pathfind(start: LatLng, end: LatLng) {
-  const raw = await request<RouteResponse>('/api/v1/pathfind', {
+  const raw = await request<RawRouteResponseNormalized>('/api/v1/pathfind', {
     method: 'POST',
     body: JSON.stringify({ start, end }),
   });
   return {
-    fastest: normalizePathResult(raw.fastest),
-    shortest: normalizePathResult(raw.shortest),
+    fastest: normalizePath(raw.fastest),
+    shortest: normalizePath(raw.shortest),
   };
 }
 

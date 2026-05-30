@@ -1,0 +1,480 @@
+context 
+# Frontend Design Specification for Kyoto Transit Routing Web Application
+
+Act as a Senior Frontend Engineer, React Architect, and UI/UX Designer.
+
+You are building the frontend of a Kyoto Transit Routing Web Application that connects to an existing backend routing API. The frontend should closely follow the layout, interaction patterns, and visual behavior described below.
+
+---
+
+# Overall Layout
+
+The application is a map-first transit planner.
+
+The screen consists of:
+
+* A large interactive map occupying approximately 75–80% of the width.
+* A single left sidebar occupying approximately 20–25% of the width.
+* The sidebar content changes depending on the currently selected feature.
+* There must never be both a left and right sidebar simultaneously.
+* The design should feel similar to Google Maps Transit, Apple Maps Transit, or JR Route Planner, while using a clean Kyoto-inspired visual style.
+
+---
+
+# Feature Switcher
+
+At the top of the sidebar, create a segmented control with two modes:
+
+1. Find Shortest Path
+2. Disable / Enable Station
+
+Only one mode can be active at a time.
+
+The active mode should be visually highlighted.
+
+Use shadcn/ui Tabs or ToggleGroup.
+
+---
+
+# Mode 1: Route Search
+
+When "Find Shortest Path" is selected, the sidebar should display route search functionality.
+
+---
+
+## Origin Input
+
+The origin is NOT required to be a train station.
+
+The user can start from:
+
+* A train station
+* A map location
+* Geographic coordinates
+* A clicked point on the map
+
+Examples:
+
+* Kyoto Station (京都駅)
+* 35.0116, 135.7681
+
+The origin input should support:
+
+* Searchable station autocomplete
+* Manual coordinate entry
+* Selection from the map using right-click context menu
+
+Display station names as:
+
+Kyoto Station (京都駅)
+
+---
+
+## Destination Input
+
+The destination can also be:
+
+* A train station
+* A map location
+* Geographic coordinates
+
+The destination input should support:
+
+* Searchable station autocomplete
+* Manual coordinate entry
+* Selection from the map using right-click context menu
+
+---
+
+# Right-Click Context Menu
+
+When the user right-clicks:
+
+* On a station marker
+* On an arbitrary map location
+
+show a floating context menu.
+
+Menu options:
+
+* Set as From Here
+* Set as To Here
+
+Behavior:
+
+Set as From Here:
+origin = clicked location
+
+Set as To Here:
+destination = clicked location
+
+The clicked location may be:
+
+* A station
+* A coordinate on the map
+
+Store coordinates if the clicked point is not a station.
+
+---
+
+# Automatic Route Calculation
+
+Whenever one of the following changes:
+
+* Origin
+* Destination
+* Algorithm settings
+* Disabled stations
+
+the frontend should automatically request new routes from the backend.
+
+No Search button is required.
+
+---
+
+# Route Results
+
+The backend always computes TWO route optimizations:
+
+1. Shortest Distance Route
+2. Fastest Travel Time Route
+
+The frontend must display BOTH results simultaneously.
+
+---
+
+# Route Summary Cards
+
+Instead of displaying a single summary card, display two cards.
+
+---
+
+## Card 1 — Shortest Distance Route
+
+Display:
+
+* Route type label:
+  "Shortest Distance"
+
+* Total distance
+
+* Total travel time
+
+* Main transit line
+
+* Number of transfers
+
+* Details button
+
+Example:
+
+Shortest Distance
+
+42 km
+41 min
+via JR Sagano Line
+2 Transfers
+
+[ Details ]
+
+---
+
+## Card 2 — Fastest Travel Time Route
+
+Display:
+
+* Route type label:
+  "Fastest Travel Time"
+
+* Total travel time
+
+* Total distance
+
+* Main transit line
+
+* Number of transfers
+
+* Details button
+
+Example:
+
+Fastest Travel Time
+
+37 min
+45 km
+via JR Sagano Line
+3 Transfers
+
+[ Details ]
+
+---
+
+# Route Details Expansion
+
+By default:
+
+* Only the summary cards are visible.
+
+The detailed route breakdown must remain hidden.
+
+When the user clicks:
+
+Details
+
+expand an accordion panel showing the complete route timeline.
+
+Each card should control its own accordion independently.
+
+---
+
+# Route Timeline
+
+The detailed timeline should include:
+
+* Start point
+* Walking segments
+* Train boarding actions
+* Line names
+* Intermediate stations
+* Transfer stations
+* Waiting times
+* Arrival point
+
+Example:
+
+Start
+Kyoto Station (京都駅)
+
+Walk
+3 min
+
+Board JR Sagano Line
+15 min
+
+Transfer at Nijo Station
+5 min
+
+Board Kyoto Subway Tozai Line
+12 min
+
+Arrival
+Uzumasa Tenjingawa Station
+
+---
+
+# Map Area
+
+The map occupies the majority of the screen.
+
+Use:
+
+* React Map GL + Mapbox GL JS
+
+or
+
+* Google Maps
+
+with React integration.
+
+The map should display:
+
+* Railway network
+* Route polylines
+* Station markers
+* Disabled station indicators
+
+---
+
+# Station Markers
+
+Each station marker has three visual states.
+
+Enabled:
+
+* White fill
+* Blue outline
+
+Disabled:
+
+* Gray
+* Reduced opacity
+
+Selected:
+
+* Blue highlight/glow
+
+---
+
+# Route Polylines
+
+Display route lines directly on the map.
+
+Different route types should be visually distinguishable.
+
+Example:
+
+Shortest Distance Route:
+
+* Blue polyline
+
+Fastest Travel Time Route:
+
+* Green polyline
+
+Both routes should be visible simultaneously when available.
+
+The user must be able to understand the difference between them through the map legend.
+
+---
+
+# Mode 2: Disable / Enable Station
+
+When the user switches to "Disable / Enable Station", the sidebar content changes completely.
+
+---
+
+## Description
+
+Display:
+
+"Click a station on the map or use the list below to disable or enable stations."
+
+---
+
+## Search Field
+
+Provide:
+
+Search station...
+
+to filter stations.
+
+---
+
+## Station List
+
+Display all stations.
+
+Each row contains:
+
+* Status indicator dot
+* English name
+* Japanese name
+* Status label
+* Toggle switch
+
+Example:
+
+● Kyoto Station 京都駅
+Enabled
+[ ON ]
+
+---
+
+## Station Toggle Behavior
+
+Turning OFF:
+
+* Adds station ID to disabledStations
+* Updates marker appearance
+* Automatically recalculates routes
+
+Turning ON:
+
+* Removes station ID from disabledStations
+* Updates marker appearance
+* Automatically recalculates routes
+
+---
+
+# Synchronization Requirements
+
+Map and Sidebar must always remain synchronized.
+
+Examples:
+
+Disable station from map
+→ Sidebar switch updates automatically
+
+Disable station from sidebar
+→ Map marker updates automatically
+
+Change origin from map
+→ Origin input updates automatically
+
+Change destination from map
+→ Destination input updates automatically
+
+---
+
+# Global State
+
+The application should maintain a centralized React Context state.
+
+Suggested structure:
+
+```ts
+{
+  mode:
+    "route-search"
+    | "station-management",
+
+  origin: Location | null,
+
+  destination: Location | null,
+
+  disabledStations: string[],
+
+  shortestDistanceRoute: RouteResult | null,
+
+  fastestTravelTimeRoute: RouteResult | null,
+
+  selectedLocation: Location | null,
+
+  loading: boolean,
+
+  error: string | null
+}
+```
+
+Where Location can represent either:
+
+* A station
+* A coordinate point on the map
+
+---
+
+# Technical Requirements
+
+Framework:
+
+* React
+* TypeScript
+
+State Management:
+
+* Context API
+
+UI Library:
+
+* shadcn/ui
+
+Styling:
+
+* Tailwind CSS
+
+Map:
+
+* React Map GL + Mapbox GL JS
+
+Animations:
+
+* Framer Motion
+
+Architecture:
+
+* Feature-based folder structure
+* Service layer for API communication
+* Automatic route recalculation via useEffect
+
+Generate the complete frontend architecture, component hierarchy, page layout, React state flow, Context Provider design, and shadcn/ui component mapping based on these specifications.
