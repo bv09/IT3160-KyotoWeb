@@ -171,6 +171,47 @@ body {
 .role-icon { font-size: 14px; }
 
 /* ═══════════════════════════════════════════
+   Mode Switcher (Nhanh nhất / Ngắn nhất)
+═══════════════════════════════════════════ */
+.mode-switcher {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 6px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.45);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.mode-btn:hover {
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.85);
+}
+
+.mode-btn.active {
+    background: linear-gradient(135deg, #0d9488, #0891b2);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(13,148,136,0.40);
+}
+
+
+/* ═══════════════════════════════════════════
    Divider & Labels
 ═══════════════════════════════════════════ */
 .divider {
@@ -408,4 +449,117 @@ body {
 .leaflet-control-zoom a:hover {
     background: rgba(79,70,229,0.7) !important;
     color: #fff !important;
+}
+
+/* ═══════════════════════════════════════════
+   Segments — Tuyến đường chi tiết
+═══════════════════════════════════════════ */
+.segments-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.segments-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.seg-item {
+    border-radius: 8px;
+    padding: 8px 10px;
+    border-left: 4px solid transparent;
+}
+
+.seg-subway {
+    background: rgba(0, 85, 204, 0.12);
+    border-left-color: #0055cc;
+}
+
+.seg-walk {
+    background: rgba(224, 123, 0, 0.12);
+    border-left-color: #e07b00;
+}
+
+.seg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.seg-icon {
+    font-size: 1rem;
+}
+
+.seg-mode {
+    flex: 1;
+    color: #e2e8f0;
+}
+
+.seg-subway .seg-mode { color: #60a5fa; }
+.seg-walk   .seg-mode { color: #fb923c; }
+
+.seg-dist {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.seg-time {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.seg-route {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Legend màu đường trên bản đồ */
+.map-legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-line {
+    width: 22px;
+    height: 4px;
+    border-radius: 2px;
+}
+
+.legend-line.subway { background: #0055cc; }
+.legend-line.walk   { background: #e07b00; border-top: 2px dashed #e07b00; background: none; height: 0; border-bottom: none; }
+
+.seg-via {
+    margin-top: 2px;
+    font-size: 0.72rem;
+    color: #64748b;
+    font-style: italic;
 }

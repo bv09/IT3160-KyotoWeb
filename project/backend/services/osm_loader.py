@@ -205,24 +205,43 @@ def _process_way(graph: SubwayGraph, way: dict) -> None:
         # Tính khoảng cách và thêm cạnh
         distance = haversine_distance(lat1, lon1, lat2, lon2)
         
+        # Lấy tên đường từ tags
+        tags = way.get("tags") or {}
+        way_name = tags.get("name:en") or tags.get("name") or None
+
         # Nếu là đường một chiều, chỉ thêm cạnh từ node1 → node2
         # Chiều Subway luôn được ưu tiên xử lý như một chiều theo thứ tự nodes trong way
-        if way.get("tags") is not None and way["tags"].get("railway") == "subway":
+        if tags.get("railway") == "subway":
             graph.add_edge(node1, node2, distance, convert_subway_time(distance))
             graph.register_way(node1, way["id"])
-            graph.register_way(node2, way["id"]) 
-            
+            graph.register_way(node2, way["id"])
+            if way_name:
+                graph.register_way_name(node1, way_name)
+                graph.register_way_name(node2, way_name)
+
         elif way.get("tags") == 'forward':
             graph.add_edge(node1, node2, distance, convert_walk_time(distance))
-            
+            if way_name:
+                graph.register_way_name(node1, way_name)
+                graph.register_way_name(node2, way_name)
+
         elif way.get("tags") == 'backward':
             graph.add_edge(node2, node1, distance, convert_walk_time(distance))
-            
+            if way_name:
+                graph.register_way_name(node1, way_name)
+                graph.register_way_name(node2, way_name)
+
         elif is_oneway:
             graph.add_edge(node1, node2, distance, convert_walk_time(distance))
-            
+            if way_name:
+                graph.register_way_name(node1, way_name)
+                graph.register_way_name(node2, way_name)
+
         else:
             graph.add_undirected_edge(node1, node2, distance, convert_walk_time(distance))
+            if way_name:
+                graph.register_way_name(node1, way_name)
+                graph.register_way_name(node2, way_name)
             
 if __name__ == "__main__":
     graphs = load_graph("data/raw_osm_data.json")
