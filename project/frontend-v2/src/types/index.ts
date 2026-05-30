@@ -8,13 +8,22 @@ export interface PathSegment {
   coord: LatLng;
   name: string | null;
   type: PathSegmentType;
+  isSubway?: boolean;
+  wayName?: string | null;
+}
+
+// ── Single path result ──
+export interface PathResult {
+  path: PathSegment[];
+  distance_meters: number;
+  estimate_time: number;
+  waypoints?: { name: string; type: string }[];
 }
 
 // ── API responses ──
 export interface RouteResponse {
-  path: PathSegment[];
-  distance_meters: number;
-  estimate_time: number;
+  shortest: PathResult | null;
+  fastest: PathResult | null;
 }
 
 export interface GraphEdge {
@@ -62,4 +71,5 @@ export interface RouteResult {
   path: PathSegment[];
   distanceMeters: number;
   estimateTime: number;
+  waypoints: { name: string; type: string }[];
 }

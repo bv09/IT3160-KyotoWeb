@@ -1,5 +1,7 @@
 import type {
   RouteResponse,
+  PathSegment,
+  PathResult,
   GraphEdgesResponse,
   MapDataResponse,
   ToggleResponse,
@@ -22,11 +24,36 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function pathfind(start: LatLng, end: LatLng) {
-  return request<RouteResponse>('/api/v1/pathfind', {
+function normalizePathResult(raw: PathResult | null): {
+  path: PathSegment[];
+  distanceMeters: number;
+  estimateTime: number;
+  waypoints: { name: string; type: string }[];
+} | null {
+  if (!raw || !raw.path) return null;
+  return {
+    path: raw.path.map((seg) => ({
+      coord: seg.coord,
+      name: seg.name,
+      type: seg.type,
+      isSubway: seg.isSubway,
+      wayName: seg.wayName,
+    })),
+    distanceMeters: raw.distance_meters,
+    estimateTime: raw.estimate_time,
+    waypoints: raw.waypoints || [],
+  };
+}
+
+export async function pathfind(start: LatLng, end: LatLng) {
+  const raw = await request<RouteResponse>('/api/v1/pathfind', {
     method: 'POST',
     body: JSON.stringify({ start, end }),
   });
+  return {
+    fastest: normalizePathResult(raw.fastest),
+    shortest: normalizePathResult(raw.shortest),
+  };
 }
 
 export function getMapData() {

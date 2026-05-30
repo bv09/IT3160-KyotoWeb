@@ -46,14 +46,14 @@ function MapEvents() {
         }
 
         pathfind(orig, dest)
-          .then((res) => {
+          .then(({ fastest }) => {
+            if (!fastest) {
+              dispatch({ type: 'SET_ERROR', payload: 'No path found between selected points.' });
+              return;
+            }
             dispatch({
               type: 'SET_ROUTE_RESULT',
-              payload: {
-                path: res.path,
-                distanceMeters: res.distance_meters,
-                estimateTime: res.estimate_time,
-              },
+              payload: fastest,
             });
           })
           .catch((err) => {
@@ -133,15 +133,12 @@ function StationLayer() {
               }
 
               try {
-                const res = await pathfind(orig, dest);
-                dispatch({
-                  type: 'SET_ROUTE_RESULT',
-                  payload: {
-                    path: res.path,
-                    distanceMeters: res.distance_meters,
-                    estimateTime: res.estimate_time,
-                  },
-                });
+                const { fastest } = await pathfind(orig, dest);
+                if (!fastest) {
+                  dispatch({ type: 'SET_ERROR', payload: 'No path found between selected points.' });
+                  return;
+                }
+                dispatch({ type: 'SET_ROUTE_RESULT', payload: fastest });
               } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
                 dispatch({ type: 'SET_ERROR', payload: msg });
