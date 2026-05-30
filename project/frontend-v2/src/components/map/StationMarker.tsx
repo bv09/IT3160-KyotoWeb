@@ -1,9 +1,9 @@
 import { memo, useCallback } from 'react';
-import { CircleMarker, Popup } from 'react-leaflet';
+import { CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
+import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import type { StationListItem } from '@/types';
-import StationCallout from './StationCallout';
 
 interface StationMarkerProps {
   station: StationListItem;
@@ -25,7 +25,10 @@ function areStationMarkersEqual(
   );
 }
 
-const StationMarker = memo(function StationMarker({ station, zoom }: StationMarkerProps) {
+const StationMarker = memo(function StationMarker({
+  station,
+  zoom: _zoom,
+}: StationMarkerProps) {
   const { toggleStation, setContextMenu } = useApp();
 
   const isBlocked = station.isDisabled;
@@ -33,9 +36,22 @@ const StationMarker = memo(function StationMarker({ station, zoom }: StationMark
   const handleClick = useCallback(
     async (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
-      await toggleStation(station.id);
+      try {
+        await toggleStation(station.id);
+        const label = station.japaneseName
+          ? `${station.name} (${station.japaneseName})`
+          : station.name;
+        toast.success(
+          isBlocked
+            ? `${label} boarding point enabled`
+            : `${label} boarding point disabled`,
+          { duration: 2500 }
+        );
+      } catch {
+        // error already handled by AppContext
+      }
     },
-    [toggleStation, station.id]
+    [toggleStation, station.id, station.name, station.japaneseName, isBlocked]
   );
 
   const handleContextMenu = useCallback(
@@ -59,10 +75,6 @@ const StationMarker = memo(function StationMarker({ station, zoom }: StationMark
     [setContextMenu, station]
   );
 
-  const popupContent = isBlocked
-    ? `<b>${station.name}</b><br/><span style="font-size:0.75rem;color:#9ca3af">${station.japaneseName}</span><br/><span style="color:#ef4444;font-size:0.75rem">Station disabled</span>`
-    : `<b>${station.name}</b><br/><span style="font-size:0.75rem;color:#6b7280">${station.japaneseName}</span>`;
-
   return (
     <CircleMarker
       center={[station.lat, station.lng]}
@@ -77,10 +89,7 @@ const StationMarker = memo(function StationMarker({ station, zoom }: StationMark
         click: handleClick,
         contextmenu: handleContextMenu,
       }}
-    >
-      <Popup>{popupContent}</Popup>
-      <StationCallout station={station} zoom={zoom} />
-    </CircleMarker>
+    />
   );
 }, areStationMarkersEqual);
 

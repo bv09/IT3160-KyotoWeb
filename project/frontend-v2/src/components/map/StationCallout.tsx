@@ -19,15 +19,10 @@ const StationCallout = memo(function StationCallout({ station, zoom }: StationCa
 
   if (level === 'hidden') return null;
 
-  const isBlocked = station.isDisabled;
-  const statusClass = isBlocked ? 'disabled' : 'enabled';
-  const statusText = isBlocked ? 'Disabled' : 'Enabled';
-
   const className = [
     'station-callout',
     level === 'compact' && 'callout-compact',
     level === 'minimal' && 'callout-minimal',
-    isBlocked && 'callout-disabled',
     isMajor && 'callout-major',
   ]
     .filter(Boolean)
@@ -46,15 +41,8 @@ const StationCallout = memo(function StationCallout({ station, zoom }: StationCa
           {level === 'minimal' ? shortenStationName(station.name) : station.name}
         </div>
 
-        {level === 'full' && station.japaneseName && (
+        {station.japaneseName && (
           <div className="callout-name-ja">{station.japaneseName}</div>
-        )}
-
-        {(level === 'full' || level === 'compact') && (
-          <div className={`callout-status ${statusClass}`}>
-            <span className="status-indicator" />
-            <span>{statusText}</span>
-          </div>
         )}
       </div>
     </Tooltip>

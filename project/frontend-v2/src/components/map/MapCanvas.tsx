@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -6,6 +6,7 @@ import {
   useMapEvents,
   Polyline,
   CircleMarker,
+  Marker,
   ZoomControl,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -17,6 +18,7 @@ import type { LatLng, GraphEdgesResponse } from '@/types';
 import MapContextMenu from './MapContextMenu';
 import MapLegend from './MapLegend';
 import StationMarker from './StationMarker';
+import StationCallout from './StationCallout';
 
 const MAP_CENTER: LatLng = [35.0116, 135.7681];
 const MAP_ZOOM = 13;
@@ -71,24 +73,74 @@ function useZoomState(): number {
   return zoom;
 }
 
-// ── Station layer (declarative, one StationMarker per station) ──
+// ── Station layer: all boarding points + centroid-anchored callouts ──
 function StationLayer() {
   const { stations } = useApp();
   const zoom = useZoomState();
 
-  // Deduplicate by name — keep the first node for each unique station name
-  const seen = new Set<string>();
-  const uniqueStations = stations.filter((s) => {
-    const key = s.name.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // Group stations by name and compute centroids for callout placement
+  const { boardingPoints, callouts } = useMemo(() => {
+    const groups = new Map<string, { latSum: number; lngSum: number; count: number }>();
+    const pointList: Array<{ station: typeof stations[0]; nameKey: string }> = [];
+
+    for (const s of stations) {
+      const key = s.name.toLowerCase();
+      pointList.push({ station: s, nameKey: key });
+
+      const g = groups.get(key);
+      if (g) {
+        g.latSum += s.lat;
+        g.lngSum += s.lng;
+        g.count += 1;
+      } else {
+        groups.set(key, { latSum: s.lat, lngSum: s.lng, count: 1 });
+      }
+    }
+
+    // Build callout entries: centroid + representative station data
+    const calloutList: Array<{
+      key: string;
+      lat: number;
+      lng: number;
+      station: typeof stations[0];
+    }> = [];
+    for (const [key, g] of groups) {
+      // Find a representative station for name/Japanese/japaneseName/isMajor data
+      const rep = stations.find((s) => s.name.toLowerCase() === key)!;
+      calloutList.push({
+        key,
+        lat: g.latSum / g.count,
+        lng: g.lngSum / g.count,
+        station: rep,
+      });
+    }
+
+    return { boardingPoints: pointList, callouts: calloutList };
+  }, [stations]);
 
   return (
     <>
-      {uniqueStations.map((station) => (
+      {/* Boarding point markers */}
+      {boardingPoints.map(({ station }) => (
         <StationMarker key={station.id} station={station} zoom={zoom} />
+      ))}
+
+      {/* Station callouts — anchored at centroids, invisible dots */}
+      {callouts.map((c) => (
+        <Marker
+          key={`callout-${c.key}`}
+          position={[c.lat, c.lng]}
+          icon={L.divIcon({
+            className: 'callout-anchor-icon',
+            html: '',
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
+          })}
+          interactive={false}
+          keyboard={false}
+        >
+          <StationCallout station={c.station} zoom={zoom} />
+        </Marker>
       ))}
     </>
   );

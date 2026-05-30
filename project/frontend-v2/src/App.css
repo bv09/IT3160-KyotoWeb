@@ -325,6 +325,7 @@
 
 /* ── Route Cards ── */
 .route-cards {
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1024,7 +1025,7 @@
 }
 
 .station-callout.callout-compact .callout-name-ja {
-  display: none;
+  /* always visible */
 }
 
 .station-callout.callout-compact .callout-status {
@@ -1049,7 +1050,7 @@
 }
 
 .station-callout.callout-minimal .callout-name-ja {
-  display: none;
+  /* always visible */
 }
 
 .station-callout.callout-minimal .callout-status {
@@ -1066,6 +1067,14 @@
 .station-callout.callout-major .callout-name-en {
   font-weight: 700;
   color: #0f172a;
+}
+
+/* ── Invisible anchor point for centroid callouts ── */
+.callout-anchor-icon {
+  background: transparent !important;
+  border: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .station-callout.callout-major .callout-inner {
