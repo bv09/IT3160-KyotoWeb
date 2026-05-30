@@ -167,9 +167,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setDisabledStations(newDisabled);
 
         // Update station list
-        setStations((prev) =>
-          prev.map((s) => (s.id === nodeId ? { ...s, isDisabled: result.blocked } : s))
-        );
+        setStations((prev) => {
+          const idx = prev.findIndex((s) => s.id === nodeId);
+          if (idx === -1) return prev;
+          const updated = { ...prev[idx], isDisabled: result.blocked };
+          const next = prev.slice();
+          next[idx] = updated;
+          return next;
+        });
 
         // Refresh graph data for blocked_track_nodes
         const freshGraph = await getGraphEdges();
@@ -187,7 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       await unblockAll();
       setDisabledStations(new Set());
-      setStations((prev) => prev.map((s) => ({ ...s, isDisabled: false })));
+      setStations((prev) => prev.map((s) => (s.isDisabled ? { ...s, isDisabled: false } : s)));
       const freshGraph = await getGraphEdges();
       setGraphData(freshGraph);
       toast.success('All stations re-enabled');

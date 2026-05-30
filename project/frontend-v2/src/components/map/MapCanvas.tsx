@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -12,10 +12,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
-import { getMapData, getGraphEdges } from '@/lib/api';
-import type { LatLng, OSMNode, GraphEdgesResponse, Location } from '@/types';
+import { getGraphEdges } from '@/lib/api';
+import type { LatLng, GraphEdgesResponse } from '@/types';
 import MapContextMenu from './MapContextMenu';
 import MapLegend from './MapLegend';
+import StationMarker from './StationMarker';
 
 const MAP_CENTER: LatLng = [35.0116, 135.7681];
 const MAP_ZOOM = 13;
@@ -38,13 +39,11 @@ function ErrorListener() {
 
 // ── Map right-click handler ──
 function MapContextMenuHandler() {
-  const { setContextMenu, mode } = useApp();
+  const { setContextMenu } = useApp();
 
   useMapEvents({
     contextmenu(e) {
-      // Prevent default browser context menu
       L.DomEvent.preventDefault(e.originalEvent);
-
       const coord: LatLng = [e.latlng.lat, e.latlng.lng];
       setContextMenu({
         visible: true,
@@ -53,312 +52,60 @@ function MapContextMenuHandler() {
         latlng: coord,
       });
     },
-    click() {
-      // Close context menu on regular click
-      // (handled by AppContext's closeContextMenu)
-    },
   });
 
   return null;
 }
 
-// ── Major station names for priority labeling ──
-const MAJOR_STATIONS = new Set([
-  'Kyoto', 'Kyōto', 'Kyoto Station',
-  'Nijo', 'Nijō', 'Nijo Station',
-  'Arashiyama', 'Arashiyama Station',
-  'Gion-Shijo', 'Gion-Shijō', 'Gion-Shijo Station',
-  'Karasuma', 'Karasuma Oike', 'Karasuma Station',
-  'Sanjo', 'Sanjō', 'Sanjo Keihan',
-  'Fushimi Inari', 'Fushimi-Inari',
-  'Uzumasa Tenjingawa', 'Uzumasa-Tenjingawa',
-  'Takeda', 'Kitaoji', 'Kitaōji',
-  'Rokujizo', 'Rokujizō',
-  'Ono', 'Daigo',
-  'Yamashina',
-  'Kuinabashi',
-  'Toji', 'Tōji',
-  'Shijo', 'Shijō',
-  'Karasuma Oike',
-  'Imadegawa',
-  'Marutamachi',
-  'Kokusaikaikan',
-]);
-
-function isMajorStation(name: string): boolean {
-  if (MAJOR_STATIONS.has(name)) return true;
-  // Partial match for compound names
-  for (const major of MAJOR_STATIONS) {
-    if (name.includes(major) || major.includes(name)) return true;
-  }
-  return false;
-}
-
-// ── Generate tooltip HTML based on zoom level ──
-type CalloutLevel = 'full' | 'compact' | 'minimal' | 'hidden';
-
-function getCalloutLevel(zoom: number, isMajor: boolean): CalloutLevel {
-  if (zoom >= 15) return 'full';
-  if (zoom >= 14) return isMajor ? 'full' : 'compact';
-  if (zoom >= 13) return isMajor ? 'compact' : 'minimal';
-  if (zoom >= 12) return isMajor ? 'minimal' : 'hidden';
-  return 'hidden';
-}
-
-function buildCalloutHTML(
-  nameEn: string,
-  nameJa: string,
-  isBlocked: boolean,
-  level: CalloutLevel
-): string {
-  const statusClass = isBlocked ? 'disabled' : 'enabled';
-  const statusText = isBlocked ? 'Disabled' : 'Enabled';
-
-  if (level === 'full') {
-    return `<div class="callout-inner">
-      <div class="callout-name-en">${nameEn}</div>
-      ${nameJa ? `<div class="callout-name-ja">${nameJa}</div>` : ''}
-      <div class="callout-status ${statusClass}">
-        <span class="status-indicator"></span>
-        <span>${statusText}</span>
-      </div>
-    </div>`;
-  }
-
-  if (level === 'compact') {
-    return `<div class="callout-inner">
-      <div class="callout-name-en">${nameEn}</div>
-      <div class="callout-status ${statusClass}">
-        <span class="status-indicator"></span>
-        <span>${statusText}</span>
-      </div>
-    </div>`;
-  }
-
-  // minimal
-  // Shorten name if too long
-  const shortName = nameEn.length > 12 ? nameEn.split(/[\s\-]/)[0] : nameEn;
-  return `<div class="callout-inner">
-    <div class="callout-name-en">${shortName}</div>
-  </div>`;
-}
-
-function getCalloutClassName(
-  level: CalloutLevel,
-  isBlocked: boolean,
-  isMajor: boolean
-): string {
-  const classes = ['station-callout'];
-  if (level === 'compact') classes.push('callout-compact');
-  if (level === 'minimal') classes.push('callout-minimal');
-  if (isBlocked) classes.push('callout-disabled');
-  if (isMajor) classes.push('callout-major');
-  return classes.join(' ');
-}
-
-// ── Station info stored for zoom updates ──
-interface StationMarkerInfo {
-  marker: L.CircleMarker;
-  nameEn: string;
-  nameJa: string;
-  isBlocked: boolean;
-  isMajor: boolean;
-}
-
-// ── Station layer ──
-function StationLayer() {
-  const {
-    disabledStations,
-    mode,
-    toggleStation,
-    setContextMenu,
-    setOrigin,
-    setDestination,
-    origin,
-    stations,
-  } = useApp();
+// ── Zoom tracker — lifts current zoom into React state ──
+function useZoomState(): number {
   const map = useMap();
-  const layerRef = useRef<L.FeatureGroup | null>(null);
-  const stationInfosRef = useRef<StationMarkerInfo[]>([]);
-  const currentZoomRef = useRef(map.getZoom());
+  const [zoom, setZoom] = useState(map.getZoom());
 
-  // Keep refs to current state for click handlers
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
-  const originRef = useRef(origin);
-  originRef.current = origin;
-
-  // Update tooltips based on current zoom
-  const updateTooltipsForZoom = useCallback((zoom: number) => {
-    const infos = stationInfosRef.current;
-    for (const info of infos) {
-      const level = getCalloutLevel(zoom, info.isMajor);
-
-      if (level === 'hidden') {
-        // Unbind tooltip if hidden
-        if (info.marker.getTooltip()) {
-          info.marker.unbindTooltip();
-        }
-      } else {
-        const html = buildCalloutHTML(info.nameEn, info.nameJa, info.isBlocked, level);
-        const className = getCalloutClassName(level, info.isBlocked, info.isMajor);
-
-        if (info.marker.getTooltip()) {
-          // Update existing tooltip
-          info.marker.setTooltipContent(html);
-          const tooltipEl = info.marker.getTooltip()?.getElement();
-          if (tooltipEl) {
-            // Update CSS classes
-            tooltipEl.className = tooltipEl.className
-              .replace(/station-callout\S*/g, '')
-              .replace(/callout-\S*/g, '')
-              .trim() + ' ' + className;
-          }
-        } else {
-          // Bind new tooltip
-          info.marker.bindTooltip(html, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -12],
-            className,
-            interactive: false,
-          });
-        }
-      }
-    }
-  }, []);
-
-  // Listen for zoom changes
   useMapEvents({
     zoomend() {
-      const newZoom = map.getZoom();
-      if (newZoom !== currentZoomRef.current) {
-        currentZoomRef.current = newZoom;
-        updateTooltipsForZoom(newZoom);
-      }
+      setZoom(map.getZoom());
     },
   });
 
-  const loadStations = useCallback(async () => {
-    try {
-      const data = await getMapData();
-      if (layerRef.current) map.removeLayer(layerRef.current);
-      const group = L.featureGroup();
-      const newInfos: StationMarkerInfo[] = [];
-      const zoom = map.getZoom();
+  return zoom;
+}
 
-      data.elements.forEach((el) => {
-        const node = el as OSMNode;
-        if (node.type !== 'node' || !node.tags?.railway || node.tags.railway !== 'stop')
-          return;
+// ── Station layer (declarative, one StationMarker per station) ──
+function StationLayer() {
+  const { stations } = useApp();
+  const zoom = useZoomState();
 
-        const nameEn = node.tags['name:en'] || node.tags['name'] || `Station ${node.id}`;
-        const nameJa = node.tags['name:ja'] || node.tags['name'] || '';
-        const isBlocked = disabledStations.has(node.id);
-        const isMajor = isMajorStation(nameEn);
-
-        const marker = L.circleMarker([node.lat, node.lon], {
-          radius: 7,
-          weight: 2,
-          color: isBlocked ? '#9ca3af' : '#3b82f6',
-          fillColor: isBlocked ? '#d1d5db' : '#ffffff',
-          fillOpacity: isBlocked ? 0.5 : 1,
-          opacity: isBlocked ? 0.5 : 1,
-        });
-
-        // Bind permanent tooltip (callout)
-        const level = getCalloutLevel(zoom, isMajor);
-        if (level !== 'hidden') {
-          const html = buildCalloutHTML(nameEn, nameJa, isBlocked, level);
-          const className = getCalloutClassName(level, isBlocked, isMajor);
-          marker.bindTooltip(html, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -12],
-            className,
-            interactive: false,
-          });
-        }
-
-        // Popup (for click)
-        const popupContent = isBlocked
-          ? `<b>${nameEn}</b><br/><span style="font-size:0.75rem;color:#9ca3af">${nameJa}</span><br/><span style="color:#ef4444;font-size:0.75rem">Station disabled</span>`
-          : `<b>${nameEn}</b><br/><span style="font-size:0.75rem;color:#6b7280">${nameJa}</span>`;
-        marker.bindPopup(popupContent);
-
-        // Right-click on station
-        marker.on('contextmenu', (e) => {
-          L.DomEvent.stopPropagation(e);
-          L.DomEvent.preventDefault(e);
-
-          setContextMenu({
-            visible: true,
-            x: (e.originalEvent as MouseEvent).clientX,
-            y: (e.originalEvent as MouseEvent).clientY,
-            latlng: [node.lat, node.lon],
-            station: {
-              id: node.id,
-              name: nameEn,
-              japaneseName: nameJa,
-              lat: node.lat,
-              lng: node.lon,
-            },
-          });
-        });
-
-        // Left-click on station
-        marker.on('click', async (e) => {
-          L.DomEvent.stopPropagation(e);
-
-          if (modeRef.current === 'station-management') {
-            // Toggle station in admin mode
-            await toggleStation(node.id);
-          }
-        });
-
-        marker.addTo(group);
-        newInfos.push({ marker, nameEn, nameJa, isBlocked, isMajor });
-      });
-
-      group.addTo(map);
-      layerRef.current = group;
-      stationInfosRef.current = newInfos;
-    } catch (err) {
-      console.error('Failed to load stations:', err);
-      toast.error('Failed to load station data');
-    }
-  }, [map, disabledStations, toggleStation, setContextMenu, setOrigin, setDestination, updateTooltipsForZoom]);
-
-  useEffect(() => {
-    loadStations();
-  }, [loadStations]);
-
-  return null;
+  return (
+    <>
+      {stations.map((station) => (
+        <StationMarker key={station.id} station={station} zoom={zoom} />
+      ))}
+    </>
+  );
 }
 
 // ── Route polylines ──
 function RouteOverlay() {
   const { shortestDistanceRoute, fastestTravelTimeRoute } = useApp();
 
-  const shortestCoords = shortestDistanceRoute?.path
-    .filter((s) => s.coord)
-    .map((s) => s.coord) || [];
+  const shortestCoords =
+    shortestDistanceRoute?.path
+      .filter((s) => s.coord)
+      .map((s) => s.coord) || [];
 
-  const fastestCoords = fastestTravelTimeRoute?.path
-    .filter((s) => s.coord)
-    .map((s) => s.coord) || [];
+  const fastestCoords =
+    fastestTravelTimeRoute?.path
+      .filter((s) => s.coord)
+      .map((s) => s.coord) || [];
 
-  // Get waypoint stations for each route
-  const shortestStops = shortestDistanceRoute?.path.filter(
-    (s) => s.type === 'stop' && s.name
-  ) || [];
-  const fastestStops = fastestTravelTimeRoute?.path.filter(
-    (s) => s.type === 'stop' && s.name
-  ) || [];
+  const shortestStops =
+    shortestDistanceRoute?.path.filter((s) => s.type === 'stop' && s.name) || [];
+  const fastestStops =
+    fastestTravelTimeRoute?.path.filter((s) => s.type === 'stop' && s.name) || [];
 
   return (
     <>
-      {/* Shortest distance route — blue */}
       {shortestCoords.length > 1 && (
         <>
           <Polyline
@@ -372,7 +119,6 @@ function RouteOverlay() {
         </>
       )}
 
-      {/* Fastest travel time route — green */}
       {fastestCoords.length > 1 && (
         <>
           <Polyline
@@ -386,7 +132,6 @@ function RouteOverlay() {
         </>
       )}
 
-      {/* Waypoint markers for shortest route */}
       {shortestStops.map((s, i) =>
         s.coord ? (
           <CircleMarker
@@ -403,7 +148,6 @@ function RouteOverlay() {
         ) : null
       )}
 
-      {/* Waypoint markers for fastest route */}
       {fastestStops.map((s, i) =>
         s.coord ? (
           <CircleMarker
@@ -474,9 +218,7 @@ function GraphOverlay() {
       .then((data: GraphEdgesResponse) => {
         if (layerRef.current) map.removeLayer(layerRef.current);
         const group = L.featureGroup();
-        const blockedTrackSet = new Set(
-          (data.blocked_track_nodes || []).map(String)
-        );
+        const blockedTrackSet = new Set((data.blocked_track_nodes || []).map(String));
 
         (data.edges || []).forEach((edge) => {
           const fromC = data.nodes[String(edge.from)];
@@ -534,10 +276,7 @@ export default function MapCanvas() {
         <LocationMarkers />
       </MapContainer>
 
-      {/* Map context menu */}
       {contextMenu.visible && <MapContextMenu />}
-
-      {/* Map legend */}
       <MapLegend />
     </div>
   );
