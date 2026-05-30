@@ -69,9 +69,12 @@ def pathfind():
         result.path.append([old_end_coord, "B", "endpoint"])
 
     return jsonify({
-        "path": result.path,
+        "path": [
+            {"coord": list(coord), "name": name, "type": typ}
+            for coord, name, typ in result.path
+        ],
         "distance_meters": round(result.distance_meters, 2) + bonus_distance,
-        "estimate_time": round(result.estimate_time, 2) + bonus_time
+        "estimate_time": round(result.estimate_time, 2) + bonus_time,
     })
 
 

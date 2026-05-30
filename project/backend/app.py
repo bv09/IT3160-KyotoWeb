@@ -1,4 +1,4 @@
-"""App factory — Tạo và cấu hình Flask app."""
+"""App factory — Create and configure Flask app (API-only)."""
 
 import json
 import logging
@@ -18,16 +18,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 def create_app(config_name: str | None = None) -> Flask:
     if config_name is None:
         config_name = os.environ.get("FLASK_ENV", "development")
 
-    app = Flask(
-        __name__,
-        static_folder="../frontend",
-        static_url_path="",
-    )
+    app = Flask(__name__)
     app.config.from_object(config[config_name])
 
     CORS(app)
@@ -43,37 +38,32 @@ def create_app(config_name: str | None = None) -> Flask:
             app.config["KDTREE"] = Tree
             app.config["NODE_IDS"] = node_ids
 
-            # TỐI ƯU: Cache map-data (file JSON) 1 lần lúc startup
+            # Cache map-data (JSON file) once at startup
             with open(data_file, "r", encoding="utf-8") as f:
                 app.config["MAP_DATA"] = json.load(f)
-            logger.info("MAP_DATA đã được cache.")
+            logger.info("MAP_DATA cached.")
 
-            # TỐI ƯU: Cache phần tĩnh của graph-edges 1 lần lúc startup
+            # Cache static portion of graph-edges once at startup
             app.config["GRAPH_EDGES_STATIC"] = _build_static_graph_data(graph)
             logger.info(
-                "GRAPH_EDGES_STATIC đã được cache (%d edges, %d nodes).",
+                "GRAPH_EDGES_STATIC cached (%d edges, %d nodes).",
                 len(app.config["GRAPH_EDGES_STATIC"]["edges"]),
                 len(app.config["GRAPH_EDGES_STATIC"]["nodes"]),
             )
 
-            logger.info("Đồ thị đã được load thành công.")
+            logger.info("Graph loaded successfully.")
         except FileNotFoundError as e:
             logger.error(str(e))
             raise
     else:
-        logger.info("DATA_FILE không được cấu hình (chế độ testing?).")
-
-    @app.route("/")
-    def index():
-        return app.send_static_file("index.html")
+        logger.info("DATA_FILE not configured (testing mode?).")
 
     return app
-
 
 if __name__ == "__main__":
     app = create_app()
     app.run(
         host=app.config.get("HOST", "0.0.0.0"),
-        port=app.config.get("PORT", 5000),
+        port=app.config.get("PORT", 5010),
         debug=app.config.get("DEBUG", False),
     )
