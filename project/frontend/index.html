@@ -44,6 +44,8 @@
             <!-- ── User Section ── -->
             <div id="userSection" class="role-section active">
                 <p class="section-label">TÌM ĐƯỜNG</p>
+
+                <!-- Nút chọn điểm + xóa -->
                 <div class="btn-row">
                     <button id="btnRoute" class="btn btn-primary">
                         <span>📍</span> Chọn điểm
@@ -52,10 +54,34 @@
                         <span>🗑</span> Xóa
                     </button>
                 </div>
-                <p class="hint-text">Bấm "Chọn điểm" rồi click 2 vị trí trên bản đồ để tìm đường đi nhanh nhất.</p>
 
+                <!-- Toggle chế độ đường -->
+                <div class="mode-switcher">
+                    <button id="btnModeFastest" class="mode-btn active">
+                        ⚡ Nhanh nhất
+                    </button>
+                    <button id="btnModeShortest" class="mode-btn">
+                        📏 Ngắn nhất
+                    </button>
+                </div>
+
+                <p class="hint-text">Bấm "Chọn điểm" rồi click 2 vị trí trên bản đồ.</p>
+
+                <!-- Legend màu -->
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <div class="legend-line subway"></div>
+                        <span>Tàu điện ngầm</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line walk"></div>
+                        <span>Đi bộ</span>
+                    </div>
+                </div>
+
+                <!-- Kết quả -->
                 <div id="result-box" class="result-box hidden">
-                    <div class="result-title">📊 Kết quả</div>
+                    <div class="result-title" id="result-mode-label">📊 Kết quả</div>
                     <div class="result-row">
                         <span class="result-label">🗺 Khoảng cách</span>
                         <span id="distance-info" class="result-value">—</span>
@@ -64,6 +90,12 @@
                         <span class="result-label">⏱ Thời gian</span>
                         <span id="time-info" class="result-value">—</span>
                     </div>
+                </div>
+
+                <!-- Tuyến đường chi tiết -->
+                <div id="segments-box" class="segments-box hidden">
+                    <div class="result-title">📍 Các trạm đi qua</div>
+                    <ul id="segments-list" class="segments-list"></ul>
                 </div>
             </div>
 
@@ -150,7 +182,6 @@
                     clearPath(map);
                     userSection.classList.remove("active");
                     adminSection.classList.add("active");
-                    // Graph mặc định ẨN khi vào Admin — admin tự bật nếu muốn
                     btnTG.innerHTML = "<span>🔗</span> Hiện Graph";
                     btnTG.classList.remove("active");
                     await refreshAdminView();
@@ -183,7 +214,6 @@
             updateStopModeUI();
         });
 
-        // TỐI ƯU: 1 request duy nhất thay vì N request tuần tự
         document.getElementById("btnClearBlocked").addEventListener("click", async () => {
             try {
                 await fetch("/api/v1/unblock-all", { method: "POST" });
@@ -192,14 +222,6 @@
         });
 
         // ── 5. Core Helpers ──
-
-        /**
-         * TỐI ƯU: Fetch graph-edges 1 lần duy nhất,
-         * dùng chung cho cả loadStations() lẫn showGraph().
-         *
-         * Nếu graph đang ẨN: chỉ cần blocked_nodes → dùng graph-edges (backend trả nhanh vì edges/nodes đã cache).
-         * Nếu graph đang HIỆN: cùng 1 response đó vẽ lại graph luôn, không fetch thêm.
-         */
         async function refreshAdminView() {
             const res  = await fetch("/api/v1/graph-edges");
             const data = await res.json();
@@ -209,18 +231,18 @@
 
             await loadStations(map, onStationClick, blockedNodes);
             if (isGraphVisible()) {
-                showGraphFromData(map, data);  // tái dùng data đã fetch, không gọi thêm
+                showGraphFromData(map, data);
             }
             refreshBlockedList(blockedNodes, nodeNameMap);
         }
 
         function buildNodeNameMap(edges) {
-            const map = {};
+            const m = {};
             for (const edge of edges) {
-                if (edge.from_name) map[String(edge.from)] = edge.from_name;
-                if (edge.to_name)   map[String(edge.to)]   = edge.to_name;
+                if (edge.from_name) m[String(edge.from)] = edge.from_name;
+                if (edge.to_name)   m[String(edge.to)]   = edge.to_name;
             }
-            return map;
+            return m;
         }
 
         function refreshBlockedList(blockedNodes, nodeNameMap) {

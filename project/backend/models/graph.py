@@ -15,7 +15,8 @@ class SubwayGraph:
         adjacency: Dict node_id → list[(neighbor_id, distance_meters, time_travel)].
         node_map: Ánh xạ 2 chiều giữa (lat, lon) và node_id.
         stop_map: Ánh xạ (lat, lon) hoặc node_id → tên trạm/điểm dừng.
-        way_map: Dict node_id → list id các con đường.
+        way_map: Dict node_id → list id các con đường (chỉ subway).
+        way_name_map: Dict node_id → tên đường (highway name, subway line name).
         blocked_Node: Dict node_id → True nếu node bị chặn, False hoặc không tồn tại nếu không bị chặn.
     """
     
@@ -25,6 +26,7 @@ class SubwayGraph:
         self.stop_map: dict = {}  # (lat,lon) hoặc node_id → tên trạm
         self.entrance_map: dict = {} # (lat,lon) hoặc node_id → tên entrance
         self.way_map: dict[int, list[int]] = {}  # node_id → list id đường (chỉ subway)
+        self.way_name_map: dict[int, str] = {}   # node_id → tên đường/tuyến
         self.blocked_node: dict[int, bool] = {}  # node_id → True
         
     def ensure_node(self, node_id: int) -> None:
@@ -74,6 +76,15 @@ class SubwayGraph:
         if node_id not in self.way_map:
             self.way_map[node_id] = []
             self.way_map[node_id].append(way_id)
+
+    def register_way_name(self, node_id: int, name: str) -> None:
+        """Đăng ký tên đường/tuyến cho một node (highway hoặc subway line)."""
+        if node_id not in self.way_name_map:
+            self.way_name_map[node_id] = name
+
+    def get_way_name(self, node_id: int) -> str | None:
+        """Lấy tên đường/tuyến của node. Trả về None nếu không có."""
+        return self.way_name_map.get(node_id)
         
     def get_node_by_coord(self, lat: float, lon: float) -> int | None:
         """Tìm node_id từ tọa độ (lat, lon). Trả về None nếu không tìm thấy."""
