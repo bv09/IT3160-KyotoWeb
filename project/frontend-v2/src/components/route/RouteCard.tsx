@@ -15,7 +15,7 @@ export default function RouteCard({ route, type }: RouteCardProps) {
   const isShort = type === 'shortest';
   const label = isShort ? 'Shortest Distance' : 'Fastest Travel Time';
 
-  const distanceKm = (route.distanceMeters / 1000).toFixed(1);
+  const distanceKm = ((route.distanceMeters ?? 0) / 1000).toFixed(1);
   const timeFormatted = formatTime(route.estimateTimeMinutes);
 
   const primaryMetric = isShort ? `${distanceKm} km` : timeFormatted;
@@ -66,10 +66,11 @@ export default function RouteCard({ route, type }: RouteCardProps) {
   );
 }
 
-function formatTime(minutes: number): string {
-  if (minutes < 1) return '< 1 min';
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m} min`;
+function formatTime(minutes: number | null | undefined): string {
+  const safe = typeof minutes === 'number' && Number.isFinite(minutes) ? minutes : 0;
+  if (safe < 1) return '< 1 min';
+  const h = Math.floor(safe / 60);
+  const m = Math.round(safe % 60);
+  if (h > 0) return h + 'h ' + m + 'm';
+  return m + ' min';
 }

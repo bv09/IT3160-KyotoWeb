@@ -54,9 +54,21 @@ function normalizePath(raw: RawPathResultNormalized | null): {
       wayName: seg[4],
     })),
     distanceMeters: raw.distance_meters,
-    estimateTime: raw.estimate_time,
+    estimateTimeMinutes: raw.estimate_time ?? 0,
     waypoints: raw.waypoints || [],
+    transfers: computeTransfers(raw.waypoints),
+    mainLine: raw.waypoints
+      ?.filter((w) => w.type === 'line')
+      .map((w) => w.name)[0] || 'Kyoto Line',
   };
+}
+
+function computeTransfers(waypoints?: { name: string; type: string }[]): number {
+  if (!waypoints || waypoints.length === 0) return 0;
+  const stationCount = waypoints.filter(
+    (w) => w.type === 'stop' || w.type === 'station'
+  ).length;
+  return Math.max(0, stationCount - 2); // subtract origin + destination
 }
 
 export async function pathfind(start: LatLng, end: LatLng) {

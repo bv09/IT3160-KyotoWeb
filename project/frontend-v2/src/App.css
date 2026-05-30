@@ -12,29 +12,21 @@
   position: relative;
 }
 
-/* ── Sidebar ── */
-.sidebar {
-  width: var(--kyoto-sidebar-width);
-  min-width: var(--kyoto-sidebar-width);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* ── Floating Panel ── */
+.floating-panel {
   background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
-  border-right: 1px solid hsl(var(--border));
-  z-index: 1000;
-  position: relative;
-  overflow: hidden;
 }
 
-.sidebar-header {
-  padding: 20px 20px 12px;
-  border-bottom: 1px solid hsl(var(--border) / 0.5);
+.floating-panel-header {
+  padding: 12px 14px;
   background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%);
   position: relative;
   overflow: hidden;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
 }
 
-.sidebar-header::before {
+.floating-panel-header::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -45,26 +37,34 @@
   border-radius: 50%;
 }
 
-.sidebar-header .app-title {
-  font-size: 1.25rem;
+.floating-panel-header .app-title {
+  font-size: 1.1rem;
   font-weight: 700;
   color: white;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-.sidebar-header .app-subtitle {
-  font-size: 0.8rem;
+.floating-panel-header .app-subtitle {
+  font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.7);
-  margin-top: 2px;
+  margin-top: 1px;
   letter-spacing: 0.05em;
 }
 
+.floating-panel-content {
+  scrollbar-gutter: stable;
+}
+
+/* Keep legacy sidebar selector for backward compat — now unused, but harmless */
+.sidebar {
+  display: none;
+}
+.sidebar-header {
+  display: none;
+}
 .sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0;
+  display: none;
 }
 
 /* ── Mode Switcher ── */
@@ -78,10 +78,14 @@
 
 .mode-btn {
   flex: 1;
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 10px;
   border: none;
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -547,6 +551,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  height: 100%;
 }
 
 .station-manager .description {
@@ -589,7 +595,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: calc(100vh - 340px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -657,6 +664,15 @@
 .station-row .station-status.disabled {
   color: #9ca3af;
   background: rgba(156, 163, 175, 0.1);
+}
+/* Toggle switch visibility — explicit track colors */
+.station-row [data-slot="switch"] {
+  background-color: #d1d5db !important;
+  border-color: #9ca3af !important;
+}
+.station-row [data-slot="switch"][data-checked] {
+  background-color: #4338ca !important;
+  border-color: #4338ca !important;
 }
 
 /* ── Disabled stations summary ── */

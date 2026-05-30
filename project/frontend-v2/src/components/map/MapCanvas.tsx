@@ -76,9 +76,18 @@ function StationLayer() {
   const { stations } = useApp();
   const zoom = useZoomState();
 
+  // Deduplicate by name — keep the first node for each unique station name
+  const seen = new Set<string>();
+  const uniqueStations = stations.filter((s) => {
+    const key = s.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   return (
     <>
-      {stations.map((station) => (
+      {uniqueStations.map((station) => (
         <StationMarker key={station.id} station={station} zoom={zoom} />
       ))}
     </>
