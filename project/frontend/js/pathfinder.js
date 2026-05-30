@@ -94,8 +94,6 @@ export function clearPath(map) {
         btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
         btnRoute.classList.remove("active");
     }
-    const box = document.getElementById("result-box");
-    if (box) box.classList.add("hidden");
 }
 
 // ──────────────── Internal ────────────────
@@ -127,8 +125,6 @@ function clearAll(map, btnRoute) {
     isSelecting = false;
     btnRoute.innerHTML = "<span>📍</span> Chọn điểm";
     btnRoute.classList.remove("active");
-    const box = document.getElementById("result-box");
-    if (box) box.classList.add("hidden");
 }
 
 function clearMarkers(map) {
@@ -341,4 +337,8 @@ function hideResults() {
     if (timeInfo)     timeInfo.textContent     = "—";
     const segBox = document.getElementById("segments-box");
     if (segBox) segBox.classList.add("hidden");
+    const segEl = document.getElementById("segments-list");
+    if (segEl) segEl.innerHTML = "";
+    const box = document.getElementById("result-box");
+    if (box) box.classList.add("hidden");
 }
