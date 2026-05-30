@@ -18,7 +18,7 @@ export default function RouteSearch() {
   } = useApp();
 
   return (
-    <div className="route-search">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-y-auto p-1">
       <LocationInputGroup
         origin={origin}
         destination={destination}
