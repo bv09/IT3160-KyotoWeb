@@ -872,6 +872,164 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* ── Station Callout Tooltips ── */
+.station-callout {
+  background: white !important;
+  border: 1px solid hsl(220, 13%, 88%) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  padding: 0 !important;
+  font-family: 'Inter', sans-serif !important;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.station-callout::before {
+  border-top-color: white !important;
+}
+
+/* Override Leaflet tooltip tip (arrow) */
+.station-callout.leaflet-tooltip-top::before {
+  border-top-color: white !important;
+  margin-left: -6px;
+}
+
+.station-callout.leaflet-tooltip-bottom::before {
+  border-bottom-color: white !important;
+}
+
+/* Remove default Leaflet tooltip border from arrow */
+.station-callout::after {
+  display: none !important;
+}
+
+/* Inner callout layout */
+.callout-inner {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 60px;
+  max-width: 180px;
+}
+
+.callout-inner .callout-name-en {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.callout-inner .callout-name-ja {
+  font-size: 0.62rem;
+  font-weight: 400;
+  color: #64748b;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.callout-inner .callout-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.callout-inner .callout-status .status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.callout-inner .callout-status.enabled {
+  color: #059669;
+}
+
+.callout-inner .callout-status.enabled .status-indicator {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.callout-inner .callout-status.disabled {
+  color: #ef4444;
+}
+
+.callout-inner .callout-status.disabled .status-indicator {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+/* ── Callout zoom-level variants ── */
+
+/* Compact callout (medium zoom) */
+.station-callout.callout-compact .callout-inner {
+  padding: 4px 8px;
+  gap: 1px;
+}
+
+.station-callout.callout-compact .callout-name-en {
+  font-size: 0.65rem;
+}
+
+.station-callout.callout-compact .callout-name-ja {
+  display: none;
+}
+
+.station-callout.callout-compact .callout-status {
+  font-size: 0.55rem;
+  margin-top: 1px;
+}
+
+.station-callout.callout-compact .callout-status .status-indicator {
+  width: 5px;
+  height: 5px;
+}
+
+/* Minimal callout (low zoom) */
+.station-callout.callout-minimal .callout-inner {
+  padding: 3px 6px;
+  min-width: 30px;
+}
+
+.station-callout.callout-minimal .callout-name-en {
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+
+.station-callout.callout-minimal .callout-name-ja {
+  display: none;
+}
+
+.station-callout.callout-minimal .callout-status {
+  display: none;
+}
+
+/* ── Disabled station callout dim effect ── */
+.station-callout.callout-disabled {
+  opacity: 0.7;
+  border-color: hsl(220, 13%, 92%) !important;
+}
+
+/* ── Major station emphasis ── */
+.station-callout.callout-major .callout-name-en {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.station-callout.callout-major .callout-inner {
+  border-left: 2.5px solid hsl(var(--primary));
+  padding-left: 8px;
+}
+
 /* ── Mobile responsive ── */
 @media (max-width: 768px) {
   .sidebar {
