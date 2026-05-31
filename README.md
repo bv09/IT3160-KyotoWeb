@@ -288,8 +288,3 @@ Tham khảo file `.env.example`:
 | `PORT` | `5010` | Port của backend server |
 
 ---
-
-## Môn học
-
-**IT3160 — Introduction to Artificial Intelligence**  
-Trường Đại học Bách Khoa Hà Nội (HUST)
