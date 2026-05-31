@@ -24,7 +24,6 @@ def create_app(config_name: str | None = None) -> Flask:
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
-
     CORS(app)
     app.register_blueprint(api_bp)
 
