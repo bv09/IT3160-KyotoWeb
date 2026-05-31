@@ -1,6 +1,5 @@
 import type {
-  RouteResponse as RawRouteResponse,
-  PathResult as RawPathResult,
+  RouteResult,
   GraphEdgesResponse,
   MapDataResponse,
   ToggleResponse,
@@ -38,12 +37,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-function normalizePath(raw: RawPathResultNormalized | null): {
-  path: PathSegment[];
-  distanceMeters: number;
-  estimateTime: number;
-  waypoints: { name: string; type: string }[];
-} | null {
+function normalizePath(raw: RawPathResultNormalized | null): RouteResult | null {
   if (!raw || !raw.path) return null;
   return {
     path: raw.path.map((seg: RawSegment) => ({

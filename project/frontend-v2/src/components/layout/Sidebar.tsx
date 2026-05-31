@@ -89,7 +89,7 @@ export default function Sidebar() {
                   onClick={() => setMode('route-search')}
                 >
                   <Route className="w-3.5 h-3.5 flex-shrink-0" />
-                  Find Shortest Path
+                  Path Finder
                 </button>
                 <button
                   className={`mode-btn ${mode === 'station-management' ? 'active' : ''}`}

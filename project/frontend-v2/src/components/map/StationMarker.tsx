@@ -29,13 +29,14 @@ const StationMarker = memo(function StationMarker({
   station,
   zoom: _zoom,
 }: StationMarkerProps) {
-  const { toggleStation, setContextMenu } = useApp();
+  const { mode, toggleStation, setContextMenu } = useApp();
 
   const isBlocked = station.isDisabled;
 
   const handleClick = useCallback(
     async (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
+      if (mode !== 'station-management') return;
       try {
         await toggleStation(station.id);
         const label = station.japaneseName
@@ -51,13 +52,13 @@ const StationMarker = memo(function StationMarker({
         // error already handled by AppContext
       }
     },
-    [toggleStation, station.id, station.name, station.japaneseName, isBlocked]
+    [mode, toggleStation, station.id, station.name, station.japaneseName, isBlocked]
   );
 
   const handleContextMenu = useCallback(
     (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
-      L.DomEvent.preventDefault(e);
+      e.originalEvent.preventDefault();
       setContextMenu({
         visible: true,
         x: (e.originalEvent as MouseEvent).clientX,
