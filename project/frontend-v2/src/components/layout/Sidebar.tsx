@@ -96,7 +96,7 @@ export default function Sidebar() {
                   onClick={() => setMode('station-management')}
                 >
                   <Settings2 className="w-3.5 h-3.5 flex-shrink-0" />
-                  Disable / Enable Station
+                  Station Management
                 </button>
               </div>
 
