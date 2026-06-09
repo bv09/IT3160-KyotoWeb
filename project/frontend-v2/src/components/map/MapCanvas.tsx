@@ -13,8 +13,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
-import { getGraphEdges } from '@/lib/api';
-import type { LatLng, GraphEdgesResponse } from '@/types';
+import type { LatLng } from '@/types';
 import MapContextMenu from './MapContextMenu';
 import MapLegend from './MapLegend';
 import StationMarker from './StationMarker';
@@ -264,53 +263,46 @@ function LocationMarkers() {
 
 // ── Graph overlay ──
 function GraphOverlay() {
-  const { showGraph, disabledStations } = useApp();
+  const { showGraph, graphData } = useApp();
   const map = useMap();
   const layerRef = useRef<L.FeatureGroup | null>(null);
 
   useEffect(() => {
-    if (!showGraph) {
+    if (!showGraph || !graphData) {
       if (layerRef.current) map.removeLayer(layerRef.current);
       layerRef.current = null;
       return;
     }
 
-    getGraphEdges()
-      .then((data: GraphEdgesResponse) => {
-        if (layerRef.current) map.removeLayer(layerRef.current);
-        const group = L.featureGroup();
-        const blockedTrackSet = new Set((data.blocked_track_nodes || []).map(String));
+    if (layerRef.current) map.removeLayer(layerRef.current);
+    const group = L.featureGroup();
+    const blockedTrackSet = new Set((graphData.blocked_track_nodes || []).map(String));
 
-        (data.edges || []).forEach((edge) => {
-          const fromC = data.nodes[String(edge.from)];
-          const toC = data.nodes[String(edge.to)];
-          if (!fromC || !toC) return;
+    (graphData.edges || []).forEach((edge) => {
+      const fromC = graphData.nodes[String(edge.from)];
+      const toC = graphData.nodes[String(edge.to)];
+      if (!fromC || !toC) return;
 
-          const isBlocked =
-            blockedTrackSet.size > 0 &&
-            (blockedTrackSet.has(String(edge.from)) ||
-              blockedTrackSet.has(String(edge.to)));
+      const isBlocked =
+        blockedTrackSet.size > 0 &&
+        (blockedTrackSet.has(String(edge.from)) ||
+          blockedTrackSet.has(String(edge.to)));
 
-          L.polyline([fromC, toC], {
-            color: isBlocked ? '#6b7280' : '#6366f1',
-            weight: isBlocked ? 2 : 3,
-            opacity: isBlocked ? 0.25 : 0.35,
-            interactive: false,
-          }).addTo(group);
-        });
+      L.polyline([fromC, toC], {
+        color: isBlocked ? '#6b7280' : '#6366f1',
+        weight: isBlocked ? 2 : 3,
+        opacity: isBlocked ? 0.25 : 0.35,
+        interactive: false,
+      }).addTo(group);
+    });
 
-        group.addTo(map);
-        layerRef.current = group;
-      })
-      .catch((err) => {
-        console.error('Failed to load graph:', err);
-        toast.error('Failed to load graph data');
-      });
+    group.addTo(map);
+    layerRef.current = group;
 
     return () => {
       if (layerRef.current) map.removeLayer(layerRef.current);
     };
-  }, [showGraph, map, disabledStations]);
+  }, [showGraph, graphData, map]);
 
   return null;
 }

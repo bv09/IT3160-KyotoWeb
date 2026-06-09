@@ -193,8 +193,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await unblockAll();
       setDisabledStations(new Set());
       setStations((prev) => prev.map((s) => (s.isDisabled ? { ...s, isDisabled: false } : s)));
-      const freshGraph = await getGraphEdges();
-      setGraphData(freshGraph);
+      // Không cần fetch lại: unblock-all đảm bảo blocked_nodes và blocked_track_nodes đều rỗng.
+      // Cập nhật graphData trực tiếp thay vì thêm 1 GET request.
+      setGraphData((prev) =>
+        prev ? { ...prev, blocked_nodes: [], blocked_track_nodes: [] } : prev
+      );
       toast.success('All stations re-enabled');
     } catch (err) {
       console.error('Reset all error:', err);

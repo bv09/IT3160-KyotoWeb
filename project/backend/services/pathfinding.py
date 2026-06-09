@@ -136,11 +136,9 @@ def _astar(
     while heap:
         f, current_node = heapq.heappop(heap)
 
-        # Đã settle → bỏ qua (stale entry)
         if current_node in visited:
             continue
 
-        # Tìm thấy đích
         if current_node == end_node:
             break
 
@@ -149,7 +147,6 @@ def _astar(
         g_current = g[current_node]
 
         for neighbor, edge_distance, edge_time in graph.adjacency.get(current_node, []):
-            # Bỏ qua node bị chặn ngay tại đây — tránh push vào heap
             if graph.blocked_node.get(neighbor, False):
                 continue
 

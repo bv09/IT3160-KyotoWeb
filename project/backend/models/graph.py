@@ -23,8 +23,8 @@ class SubwayGraph:
     def __init__(self):
         self.adjacency: dict[int, list[tuple[int, float, float]]] = {}
         self.node_map: dict = {}  # (lat,lon) → node_id VÀ node_id → (lat,lon)
-        self.stop_map: dict = {}  # (lat,lon) hoặc node_id → tên trạm
-        self.entrance_map: dict = {} # (lat,lon) hoặc node_id → tên entrance
+        self.stop_map: dict = {}  # node_id → tên trạm
+        self.entrance_map: dict = {} # node_id → tên entrance
         self.way_map: dict[int, list[int]] = {}  # node_id → list id đường (chỉ subway)
         self.way_name_map: dict[int, str] = {}   # node_id → tên đường/tuyến
         self.blocked_node: dict[int, bool] = {}  # node_id → True
